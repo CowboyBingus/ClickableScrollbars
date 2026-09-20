@@ -1,3 +1,12 @@
+# v2.2
+
+- Scales the capture window, the pointer box, the accepted bar size, the drag thresholds and the wheel-step seed to the display height instead of keeping fixed pixels.
+- Keeps the tested 1440p values exactly as the reference, so an existing install behaves identically.
+- Follows a resolution or monitor change on the next press and re-learns the wheel step for the new scale.
+- Retries once with a doubled capture window when a thumb is taller than the strip or the click is far from it, instead of losing the click.
+- Leaves values set in the ini absolute: a number typed by hand means exactly that number.
+- Adds the `window_max`, `scale_geometry` and `cursor_mask_radius` settings and logs `scale`, `display_height` and `wide_retries`.
+
 # v2.1
 
 - Sends every wheel notch on the frame the pointer produced it, so the thumb can no longer trail the mouse or keep moving after it stops.

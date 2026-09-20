@@ -2,17 +2,21 @@
 
 ## Offline checks that pass
 
-- Detector: 31 cases, including a coloured pointer sprite painted over a thumb,
+- Detector: 49 cases, including a coloured pointer sprite painted over a thumb,
   a bright interruption inside a bar, a coloured band that must split a bar, an
-  adaptive brightness case, and the two captured live strips replayed with exact
+  adaptive brightness case, the 1080p/1440p/2160p geometry scaling with the ini
+  overrides and clamps, and the two captured live strips replayed with exact
   expectations (grab inside the thumb, track press outside it).
-- Runtime: 49 cases against a scripted platform, covering the whole burst on the
+- Runtime: 58 cases against a scripted platform, covering the whole burst on the
   click frame, a repeat click that changes nothing, one-to-one dragging with no
   capture during the drag, a pointer teleport that re-baselines instead of
   scrolling, a mismatched wheel step corrected by a bounded number of nudges,
-  `no_response` for an ignored wheel, error tolerance and the log contents.
-- Windows platform: 12 cases that exercise the FFI bindings, the capture path
-  and the sampler outside the game.
+  `no_response` for an ignored wheel, a doubled retry that finds a thumb outside
+  the strip (and the same click failing when the retry is disabled), a display
+  change that rescales the geometry and drops the learned step, error tolerance
+  and the log contents.
+- Windows platform: 13 cases that exercise the FFI bindings, the capture path,
+  the display-height query and the sampler outside the game.
 - Package: the manager ZIP is re-read entry by entry, its payload is compared
   with the build output and the payload is checked for forbidden APIs.
 

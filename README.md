@@ -19,6 +19,10 @@ being able to use the mouse wheel.
   were.
 - **No files on disk beyond the log.** Diagnostic capture dumps are off by
   default (`dump_captures=0`).
+- **Fits your display.** The capture window, pointer box, accepted bar size and
+  drag thresholds scale with the viewport height from a tested 1440p reference,
+  so 1080p, 1440p and 4K screens get the same relative geometry. A resolution or
+  monitor change is picked up on the next click.
 - **Covers the Armory lists.** Primary, Secondary, Throwable, Armor, Helmet,
   Cape, Emote, Victory Pose, Player Card, Title and the Career stats list — the
   lists whose bars the game draws in its native UI, where the shipped XAML
@@ -76,6 +80,13 @@ recognises that thumb:
    context at 3440×1440 — falling back to the desktop context (and logging the
    choice) when a window copy comes back black or clipped.
 
+8. Geometry is relative to the display: the pixel constants were measured on a
+   1440 px tall viewport and are multiplied by `display_height / 1440`, so a
+   2160p screen gets a 690 px capture window, a ±108 pointer box and a 42 px
+   bar-width limit. If a thumb still does not fit in the strip, one doubled
+   retry finds it rather than losing the click. Numbers written in the ini are
+   absolute device pixels and are never scaled.
+
 Every decision is written to
 `%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ClickableScrollbars.log`: the
 settings in force, counters, timing health (`capture_ms_avg`, `frame_ms_avg`,
@@ -89,7 +100,7 @@ what the input-level design does instead](docs/RESEARCH.md) ·
 
 ## Install
 
-Close the game, import `Clickable-Scrollbars-v2.1.zip` into HDArsenal or HD2MM
+Close the game, import `Clickable-Scrollbars-v2.2.zip` into HDArsenal or HD2MM
 alongside **Bingus Shared Loader v15 or newer**, enable both, then purge and
 redeploy. The loader discovers the addon through its `-- HD2-Addon:`
 declaration. See [INSTALL.txt](INSTALL.txt).
@@ -101,6 +112,9 @@ Optional `%LOCALAPPDATA%\ClickableScrollbars\ClickableScrollbars.ini`:
 | Key | Default | Meaning |
 |---|---:|---|
 | `enabled` | 1 | 0 disables the addon without uninstalling |
+| `scale_geometry` | 1 | 0 keeps the reference 1440p pixels instead of scaling them |
+| `window_max` | 1400 | widest the capture strip may grow to in a retry |
+| `cursor_mask_radius` | 72 | half-size of the pointer box at the 1440p reference |
 | `center_tolerance` | 4 | px of aimed error that counts as centred |
 | `jump_max_notches` | 120 | notches a track click may send at once |
 | `max_corrections` / `correction_notches` | 2 / 40 | how many settle nudges one click may add, and their size cap |
@@ -122,7 +136,7 @@ Optional `%LOCALAPPDATA%\ClickableScrollbars\ClickableScrollbars.ini`:
 
 ## Status
 
-Offline verification: 31 detector tests, 49 runtime tests, 12 platform tests
+Offline verification: 49 detector tests, 58 runtime tests, 13 platform tests
 and the package check pass. The detector replay against the captured live
 frames is exact rather than lenient: clicking the Armory thumb is a grab with
 the pointer sprite over it, clicking the Career thumb is a grab, and clicking
@@ -150,9 +164,9 @@ python -B ClickableScrollbars/scripts/build.py
 The build validates the `-- HD2-Addon:` declaration, compiles the source with
 the same LuaJIT the other mods use, runs both Lua suites and the package check,
 rebuilds `data/9ba626afa44a3aa3.patch_0`, re-reads it with the repository's
-patch inspector, then writes `releases/Clickable-Scrollbars-v2.1.zip`.
+patch inspector, then writes `releases/Clickable-Scrollbars-v2.2.zip`.
 
-Run `python scripts/privacy_audit.py --zip releases/Clickable-Scrollbars-v2.1.zip` to
+Run `python scripts/privacy_audit.py --zip releases/Clickable-Scrollbars-v2.2.zip` to
 re-check the published source inventory and the packaged archive.
 
 AI-assisted development with GPT-6 Astra.

@@ -101,6 +101,45 @@ desktop copy on the first capture of a session, and fall back permanently (with
 captured while a drag is in progress, so the steady-state cost of dragging is a
 few arithmetic operations per frame.
 
+## Geometry follows the display
+
+Every pixel constant in the detector was measured on a 1440 px tall viewport:
+the bar is about 13 px wide, the pointer sprite about 100 px across, the pointer
+halo about 70 px, and one wheel notch about 13 px. The game scales its interface
+with the viewport height (the Career thumb is roughly 440 design pixels, 586 px
+at 1440p), so those constants cannot stay fixed on another display. Two
+ship-tested failures followed from that:
+
+* At 2160p the same thumb would be about 880 px tall, while a 460 px capture
+  window only holds runs up to 865 px, so the Career bar would not be
+  recognised at all.
+* The pointer sprite would grow to about 150 px, slightly wider than the 144 px
+  mask box, so the covered middle of a thumb could be read as background.
+
+Version 2.2 therefore treats the measured values as the *reference* for a
+1440 px viewport and multiplies the geometry by `display_height / 1440`, taken
+from the game window's client area on the first press and re-checked on every
+later press. The resulting values are:
+
+| Viewport height | Capture window | Strip width | Pointer box | Widest bar | Shortest bar | Wheel-step seed |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1080 | 345 | 72 | ±54 | 21 | 33 | 9.8 px |
+| 1440 | 460 | 96 | ±72 | 28 | 44 | 13 px |
+| 2160 | 690 | 144 | ±108 | 42 | 66 | 19.5 px |
+
+The 1440p row is byte-identical to the values earlier versions shipped, so an
+existing install behaves exactly as before. Brightness thresholds, timing and
+the wheel-step *range* are deliberately not scaled: luma is not a length, and
+the calibration range is widened by the same factor separately. Values written
+into the ini stay absolute device pixels and are never scaled, and
+`scale_geometry=0` turns the whole transform off.
+
+Two further guards cover the cases the scale alone cannot: a thumb taller than
+the strip, or a track click far from it on a long list, now triggers one retry
+with a doubled capture window (`window_max` caps it, `wide_retries` counts it);
+and a scale change resets the tracked thumb, the cached bar column and the
+learned wheel step, because all three were measured in the old geometry.
+
 ## What is verified offline
 
 The detector is replayed against captured frames of the live Armory and Career

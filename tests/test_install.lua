@@ -23,17 +23,21 @@ local function check(name, condition, detail)
     end
 end
 
-local function new_platform(shift)
+local function new_platform(options)
+    if type(options) == 'number' or options == nil then options = {shift = options} end
+    local shift = options.shift
     local platform = {wheels = {}, closed = false, captures = 0}
     platform.state = {
         now = 1000, cursor = {x = 900, y = 400}, down = false, foreground = true,
         bar = {left = 880, right = 891, top = 460, bottom = 700}, shift = shift or 13,
+        display_height = options.display_height,
     }
     function platform.now() return platform.state.now end
     function platform.cursor() return platform.state.cursor.x, platform.state.cursor.y end
     function platform.pressed() return platform.state.down end
     function platform.key_state() return 0 end
     function platform.foreground_self() return platform.state.foreground end
+    function platform.display_height() return platform.state.display_height end
     function platform.close() platform.closed = true end
     function platform.wheel(notches)
         platform.wheels[#platform.wheels + 1] = notches
@@ -46,7 +50,7 @@ local function new_platform(shift)
     function platform.capture(center_x, center_y, options, strip_width, strip_window)
         platform.captures = platform.captures + 1
         local width = math.min(strip_width or options.strip_width, 160)
-        local height = math.min((strip_window or options.window) * 2, 1100)
+        local height = math.min((strip_window or options.window) * 2, platform.capture_cap or 1100)
         local origin_x = center_x - math.floor(width / 2)
         local origin_y = center_y - math.floor(height / 2)
         local bar = platform.state.bar
@@ -328,6 +332,57 @@ check('the fallback is counted', (fallback_state.capture_fallbacks or 0) >= 1,
 check('the click still jumps on the desktop path', #fallback.wheels > 0, #fallback.wheels)
 check('the desktop device context is used from then on', desktop_captures >= 1 and window_captures <= 2,
     desktop_captures .. '/' .. window_captures)
+
+-- ------------------------------------------- 14. geometry follows the display
+
+local scaled, scaled_environment, scaled_state = boot({shift = 13, display_height = 2160})
+check('a 2160p display scales the geometry', scaled_state.scale == 1.5
+    and scaled_state.settings.window == 690 and scaled_state.settings.strip_width == 144
+    and scaled_state.settings.cursor_mask_radius == 108,
+    tostring(scaled_state.scale) .. '/' .. tostring(scaled_state.settings.window))
+check('the display height is reported', scaled_state.display_height == 2160, scaled_state.display_height)
+press(scaled, scaled_environment, 886, 300)
+drain(scaled, scaled_environment, 1500)
+check('a scaled click still lands on the pointer', math.abs(scaled.bar_center() - 300) <= 13,
+    scaled.bar_center())
+check('a scaled click stays bounded', scaled_state.corrections <= 2, scaled_state.corrections)
+
+-- The same session, moved to a different display: the next press re-derives the
+-- geometry and forgets the step and column measured at the old scale.
+scaled.state.down = false
+tick(scaled, scaled_environment)
+scaled_state.pixels_per_notch = 13
+scaled.state.bar_cache = nil
+scaled.state.display_height = 1440
+scaled.state.now = scaled.state.now + 3000
+press(scaled, scaled_environment, 886, 520)
+check('a display change rescales the geometry', scaled_state.scale == 1
+    and scaled_state.settings.window == 460 and scaled_state.settings.cursor_mask_radius == 72,
+    tostring(scaled_state.scale) .. '/' .. tostring(scaled_state.settings.window))
+check('the old wheel step is dropped with it', scaled_state.pixels_per_notch == nil,
+    tostring(scaled_state.pixels_per_notch))
+
+-- ------------------------------------------------- 15. the wide retry pass
+
+-- A thumb outside the normal strip (a long list, or a click far from the thumb)
+-- is still found: one doubled retry replaces the empty window.
+local retry, retry_environment, retry_state = boot({shift = 13, display_height = 1440})
+retry.capture_cap = 2200
+retry.state.bar = {left = 880, right = 891, top = 100, bottom = 500}
+press(retry, retry_environment, 886, 1000)
+drain(retry, retry_environment, 1500)
+check('a thumb outside the strip is found by the retry', retry_state.pages == 1 and #retry.wheels > 0,
+    'pages=' .. retry_state.pages .. ' wheels=' .. #retry.wheels)
+check('the retry is counted', retry_state.wide_retries == 1, tostring(retry_state.wide_retries))
+
+local no_retry, no_retry_environment, no_retry_state = boot({shift = 13, display_height = 1440})
+no_retry.capture_cap = 2200
+no_retry_state.settings.window_max = no_retry_state.settings.window
+no_retry.state.bar = {left = 880, right = 891, top = 100, bottom = 500}
+press(no_retry, no_retry_environment, 886, 1000)
+drain(no_retry, no_retry_environment, 600)
+check('without the retry the same click is a no-op', no_retry_state.pages == 0 and #no_retry.wheels == 0,
+    'pages=' .. no_retry_state.pages)
 
 print(string.format('install: %d passed, %d failed', passed, failed))
 if failed > 0 then os.exit(1) end

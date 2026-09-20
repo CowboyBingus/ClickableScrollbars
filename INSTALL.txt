@@ -1,4 +1,4 @@
-Clickable Scrollbars - v2.1
+Clickable Scrollbars - v2.2
 
 Lets you click a menu scrollbar track to move the thumb to the pointer, and
 drag the thumb to scroll with the mouse, instead of only being able to use the
@@ -16,11 +16,17 @@ The addon ships no DLL, does not modify the game executable or any game file,
 writes no game memory and installs no system hooks. It reads the screen,
 polls the left mouse button and injects wheel events from inside the game.
 
+Geometry follows the display: the capture window, pointer box, accepted bar
+size, drag thresholds and wheel-step seed scale with the viewport height from a
+tested 1440p reference, so 1080p, 1440p and 4K screens keep the same relative
+behaviour. A resolution or monitor change is picked up on the next click. Values
+written in the ini are absolute device pixels.
+
 INSTALL
 
 1. Close Helldivers 2.
 
-2. Import Clickable-Scrollbars-v2.1.zip into Arsenal or HD2MM, replacing any
+2. Import Clickable-Scrollbars-v2.2.zip into Arsenal or HD2MM, replacing any
    older Clickable Scrollbars entry. The v1 package shipped a UI resource
    override that cannot reach the native Armory bars; remove it.
 
@@ -46,6 +52,9 @@ corrections= settle nudges sent after a page
 no_response= a page the list did not answer (list end, or wheel ignored)
 misses=      clicks with no recognised thumb
 capture_source= window (cheap) or screen (desktop DC) - with capture_ms_avg
+scale=       geometry factor in use (1 at the tested 1440p reference)
+display_height= viewport height the factor came from
+wide_retries= clicks that needed the doubled capture window
 last_bar=    the thumb rectangle that was detected (screen pixels)
 last_moved=  thumb displacement measured after a page
 pixels_per_notch= median wheel step learned on this machine

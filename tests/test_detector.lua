@@ -199,5 +199,55 @@ check('coloured band outside the pointer splits the body', break_found ~= nil
     and (break_found.bottom <= 175 or break_found.top >= 197),
     break_found and (break_found.top .. '..' .. break_found.bottom))
 
+-- 22. Geometry follows the display height: the constants were measured on a
+--     1440 px tall viewport, so a 2160p viewport must scale them and a 720p one
+--     must shrink them.
+check('reference scale is one', module.scale_for_height(1440) == 1)
+check('missing height keeps the reference', module.scale_for_height(nil) == 1
+    and module.scale_for_height(100) == 1)
+check('2160p scale', math.abs(module.scale_for_height(2160) - 1.5) < 0.001,
+    module.scale_for_height(2160))
+check('720p scale', math.abs(module.scale_for_height(720) - 0.5) < 0.001,
+    module.scale_for_height(720))
+check('scale is bounded', module.scale_for_height(8640) == 4 and module.scale_for_height(240) == 0.4)
+
+local reference = module.parse_settings(nil, nil)
+local big = module.scale_settings(reference, module.scale_for_height(2160))
+check('window scales with the display', big.window == 690, big.window)
+check('strip scales with the display', big.strip_width == 144, big.strip_width)
+check('pointer box scales with the display', big.cursor_mask_radius == 108
+    and big.cursor_mask.x1 == 108 and big.cursor_mask.y0 == -108,
+    big.cursor_mask_radius)
+check('bar size limits scale with the display', big.max_width == 42 and big.min_width == 9
+    and big.min_height == 66, big.max_width .. '/' .. big.min_width .. '/' .. big.min_height)
+check('step seed and tolerances scale', math.abs(big.default_pixels_per_notch - 19.5) < 0.001
+    and big.center_tolerance == 6 and big.drag_threshold == 15,
+    big.default_pixels_per_notch .. '/' .. big.center_tolerance)
+check('brightness and timing do not scale', big.min_luma == 105 and big.max_luma == 220
+    and big.jump_max_notches == 120 and big.settle_delay_ms == 200 and big.max_spread == 18)
+
+local small = module.scale_settings(reference, module.scale_for_height(720))
+check('720p shrinks the same way', small.window == 230 and small.strip_width == 48
+    and small.cursor_mask_radius == 36 and small.max_width == 14,
+    small.window .. '/' .. small.strip_width .. '/' .. small.cursor_mask_radius)
+
+-- 23. Values typed into the ini are absolute: they must survive scaling, and a
+--     tighter window_max must not be widened by it.
+local pinned = module.parse_settings('window=700\ncursor_mask_radius=90\nmax_width=64\nwindow_max=700\n', nil)
+check('ini keys are marked as overrides', pinned.overridden.window == true
+    and pinned.overridden.max_width == true and pinned.overridden.min_width == nil)
+local pinned_scaled = module.scale_settings(pinned, 2)
+check('ini geometry stays absolute', pinned_scaled.window == 700 and pinned_scaled.max_width == 64
+    and pinned_scaled.window_max == 700, pinned_scaled.window .. '/' .. pinned_scaled.max_width
+    .. '/' .. pinned_scaled.window_max)
+check('unset keys still scale', pinned_scaled.strip_width == 192
+    and pinned_scaled.cursor_mask_radius == 90, pinned_scaled.strip_width .. '/'
+    .. pinned_scaled.cursor_mask_radius)
+check('scaled settings stay clamped', module.scale_settings(reference, 4).window <= 1400
+    and module.scale_settings(reference, 4).strip_width <= 240
+    and module.scale_settings(reference, 4).max_width <= 80)
+check('window_max never undercuts window', module.parse_settings('window=900\nwindow_max=200\n', nil).window_max == 900)
+check('scaling can be disabled', module.parse_settings('scale_geometry=0\n', nil).scale_geometry == 0)
+
 print(string.format('detector: %d passed, %d failed', passed, failed))
 if failed > 0 then os.exit(1) end

@@ -29,6 +29,9 @@ check('cursor readable', type(platform.cursor()) == 'number' or platform.cursor(
 check('foreground query', type(platform.foreground_self()) == 'boolean')
 check('button query', type(platform.pressed()) == 'boolean')
 check('key state query', type(platform.key_state()) == 'number')
+check('display height readable', platform.display_height() == nil
+    or (type(platform.display_height()) == 'number' and platform.display_height() >= 240),
+    platform.display_height())
 
 local options = module.parse_settings(nil, nil)
 local sample = platform.capture(400, 400, options)

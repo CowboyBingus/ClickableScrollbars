@@ -49,13 +49,20 @@
 -- events (SendInput) from inside the running game, nothing else. The build
 -- refuses to package a script that uses those APIs.
 
-local module = {revision = 'v2.1'}
+local module = {revision = 'v2.2'}
 
+-- Every pixel value below is expressed for a 1440 px tall viewport, which is
+-- where the bar, the pointer sprite and the wheel step were measured. At
+-- startup the geometry is multiplied by display_height / 1440, so a 1080p,
+-- 1440p, 2160p or 8K viewport keeps the same *relative* geometry instead of the
+-- same absolute pixel sizes. Values written in the ini are absolute device
+-- pixels and are never scaled. Set scale_geometry=0 to keep the raw numbers.
 local DEFAULTS = {
     enabled = true,
     -- Capture geometry.
     strip_width = 96,        -- px captured horizontally, centred on the cursor
     window = 460,            -- px captured vertically either side of the cursor
+    window_max = 1400,       -- widest the strip may grow to when a thumb does not fit
     narrow_width = 40,       -- px wide second pass once a bar column is known
     narrow_window = 420,     -- px tall second pass
     bar_cache_ms = 60000,    -- how long a known bar column is trusted
@@ -89,6 +96,13 @@ local DEFAULTS = {
     -- halo outside it is handled by the luma window and the local-contrast
     -- test, because a smooth lift has no contrast against its own neighbours.
     cursor_mask = {x0 = -72, x1 = 72, y0 = -72, y1 = 72},
+    -- Which keys follow the display scale rather than staying absolute.
+    scaled_keys = {'strip_width', 'window', 'narrow_width', 'narrow_window', 'min_height', 'min_width',
+                   'max_width', 'local_offset', 'max_bridge', 'max_gap', 'thumb_margin',
+                   'column_tolerance', 'drag_threshold', 'drag_max_step_px',
+                   'default_pixels_per_notch', 'calibration_min_px', 'calibration_max_px',
+                   'center_tolerance', 'settle_stable_px'},
+    cursor_mask_radius = 72, -- px, scaled with the display
     -- Aiming and following.
     default_pixels_per_notch = 13, -- measured wheel step before calibration
     center_tolerance = 4,    -- px of aimed error that counts as centred
@@ -112,6 +126,7 @@ local DEFAULTS = {
     cooldown_ms = 0,         -- shortest gap between two track-click jumps
     min_capture_interval_ms = 40,
     use_window_capture = 1,  -- 1 tries the game's own window DC before the desktop DC
+    scale_geometry = 1,      -- 1 scales the pixel geometry to the display height
     error_limit = 8,         -- frame errors tolerated before the addon stops
     dump_captures = 0,       -- diagnostic BMP dumps; 0 keeps nothing on disk
 }
@@ -499,12 +514,16 @@ end
 function module.parse_settings(text, base)
     local settings = {}
     for key, value in pairs(base or DEFAULTS) do settings[key] = value end
+    -- Keys that came from the ini hold absolute device pixels and are never
+    -- scaled: a value the user typed means exactly what it says.
+    local overridden = {}
     if type(text) == 'string' then
         for line in text:gmatch('[^\r\n]+') do
             local key, value = line:match('^%s*([%a_]+)%s*=%s*([%-%d%.]+)%s*$')
             if key and DEFAULTS[key] ~= nil and type(DEFAULTS[key]) ~= 'table' then
                 local number = tonumber(value)
                 if number then
+                    overridden[key] = true
                     if type(DEFAULTS[key]) == 'boolean' then
                         settings[key] = number ~= 0
                     else
@@ -514,8 +533,16 @@ function module.parse_settings(text, base)
             end
         end
     end
+    settings.overridden = overridden
+    return module.clamp_settings(settings)
+end
+
+-- Bounds every value so a hostile or careless ini cannot produce a geometry the
+-- detector or the capture surface cannot honour.
+function module.clamp_settings(settings)
     settings.strip_width = clamp(math.floor(settings.strip_width), 32, 240)
     settings.window = clamp(math.floor(settings.window), 120, 1400)
+    settings.window_max = clamp(math.floor(settings.window_max), settings.window, 1400)
     settings.narrow_width = clamp(math.floor(settings.narrow_width), 16, 120)
     settings.narrow_window = clamp(math.floor(settings.narrow_window), 120, 1400)
     settings.bar_cache_ms = clamp(math.floor(settings.bar_cache_ms), 0, 600000)
@@ -560,10 +587,45 @@ function module.parse_settings(text, base)
     settings.cooldown_ms = clamp(math.floor(settings.cooldown_ms), 0, 5000)
     settings.min_capture_interval_ms = clamp(math.floor(settings.min_capture_interval_ms), 0, 5000)
     settings.use_window_capture = clamp(math.floor(settings.use_window_capture), 0, 1)
+    settings.scale_geometry = clamp(math.floor(settings.scale_geometry), 0, 1)
     settings.error_limit = clamp(math.floor(settings.error_limit), 1, 1000)
     settings.dump_captures = clamp(math.floor(settings.dump_captures), 0, 50)
+    settings.cursor_mask_radius = clamp(settings.cursor_mask_radius, 24, 320)
+    settings.cursor_mask = {
+        x0 = -math.floor(settings.cursor_mask_radius), x1 = math.ceil(settings.cursor_mask_radius),
+        y0 = -math.floor(settings.cursor_mask_radius), y1 = math.ceil(settings.cursor_mask_radius),
+    }
     settings.enabled = settings.enabled and true or false
     return settings
+end
+
+-- The reference geometry was measured on a 1440 px tall viewport. The game
+-- scales its interface with the viewport height (the Career thumb is ~440
+-- design pixels, 586 px at 1440p), so the capture window, the pointer box, the
+-- accepted bar width, the pointer-sized gaps and the wheel-step seed all follow
+-- that same ratio. A 2160p viewport therefore gets a 690 px window, a +/-108
+-- pointer box and a 43 px width limit without any ini change.
+local REFERENCE_HEIGHT = 1440
+
+function module.scale_for_height(height)
+    if type(height) ~= 'number' or height < 240 then return 1 end
+    return clamp(height / REFERENCE_HEIGHT, 0.4, 4)
+end
+
+function module.scale_settings(base, scale)
+    local scaled = {}
+    for key, value in pairs(base) do scaled[key] = value end
+    scaled.scale = scale
+    if scale == 1 then return module.clamp_settings(scaled) end
+    for _, key in ipairs(DEFAULTS.scaled_keys) do
+        if not (base.overridden and base.overridden[key]) then
+            scaled[key] = base[key] * scale
+        end
+    end
+    if not (base.overridden and base.overridden.cursor_mask_radius) then
+        scaled.cursor_mask_radius = base.cursor_mask_radius * scale
+    end
+    return module.clamp_settings(scaled)
 end
 
 -- --------------------------------------------------------------- platform
@@ -673,6 +735,20 @@ function module.create_platform()
     function platform.cursor()
         if user32.GetCursorPos(point) == 0 then return nil end
         return point[0].x, point[0].y
+    end
+
+    -- Height of the game's own viewport, which is what the interface scales
+    -- with: the client area in windowed mode, the desktop otherwise. Read in the
+    -- same coordinate space as the cursor, so a DPI-virtualised process still
+    -- gets a scale consistent with the coordinates it captures.
+    function platform.display_height()
+        local window = user32.GetForegroundWindow()
+        if window ~= nil and user32.IsWindow(window) ~= 0 and user32.GetClientRect(window, rect) ~= 0 then
+            local height = rect[0].bottom - rect[0].top
+            if height >= 240 then return height end
+        end
+        if virtual.height >= 240 then return virtual.height end
+        return nil
     end
 
     function platform.pressed()
@@ -809,6 +885,7 @@ function module.install(create_platform, environment)
         capture_failures = 0, errors = 0, frames = 0, down_frames = 0, frame_clicks = 0, last_key = 0,
         wheel_units = 0, drag_notches = 0, drag_active = false,
         captures = 0, dumps = 0, last_dump = nil,
+        wide_retries = 0, capture_fallbacks = 0,
         frame_ms_total = 0, frame_ms_max = 0, capture_ms_total = 0, capture_ms_max = 0,
         dirty = true, last_reason = 'start', last_direction = nil, last_bar = nil, last_notches = 0,
         last_delta = nil, last_moved = nil, last_luminance = nil, last_background = nil,
@@ -834,7 +911,11 @@ function module.install(create_platform, environment)
         state.status = 'disabled: ' .. tostring(platform)
         return nil, state.status
     end
-    state.settings = read_settings()
+    -- The ini is read once and kept as the base; the effective settings are the
+    -- base at the current display scale, so a resolution change can be followed
+    -- without re-reading anything.
+    state.base_settings = read_settings()
+    state.settings = state.base_settings
     state.status = state.settings.enabled and 'running' or 'disabled: config'
 
     local previous_update, previous_shutdown = environment.update, environment.shutdown
@@ -873,6 +954,8 @@ function module.install(create_platform, environment)
             put('status=%s', state.status)
             if state.last_error then put('error=%s', state.last_error) end
             put('--- settings')
+            put('scale=%s', tostring(state.scale or 1))
+            put('display_height=%s', tostring(state.display_height or 'unknown'))
             for _, key in ipairs({'enabled', 'center_tolerance', 'jump_max_notches', 'correction_notches',
                                   'max_corrections', 'settle_delay_ms', 'settle_interval_ms', 'settle_stable_px',
                                   'settle_checks', 'drag_threshold', 'drag_max_step_px', 'drag_max_notches',
@@ -894,6 +977,7 @@ function module.install(create_platform, environment)
             put('--- health')
             put('capture_source=%s', tostring(state.capture_source or 'window'))
             put('capture_fallbacks=%d', state.capture_fallbacks or 0)
+            put('wide_retries=%d', state.wide_retries or 0)
             put('captures=%d', state.captures)
             put('capture_ms_max=%d', state.capture_ms_max)
             put('capture_ms_avg=%.3f', state.captures > 0 and state.capture_ms_total / state.captures or 0)
@@ -999,6 +1083,32 @@ function module.install(create_platform, environment)
         return sample
     end
 
+    -- Geometry follows the display. The game scales its interface with the
+    -- viewport height, so every pixel constant measured at the 1440 px reference
+    -- is multiplied by display_height / 1440: a 2160p viewport gets a 690 px
+    -- capture window and a +/-108 pointer box, a 1080p viewport gets 345 and
+    -- +/-54. A monitor or resolution change is picked up on the next press, and
+    -- the tracked thumb, the cached column and the learned wheel step are
+    -- dropped with the geometry they were measured in.
+    local function refresh_geometry(force)
+        local height = platform.display_height and platform.display_height() or nil
+        if not height then return false end
+        local scale = state.settings.scale_geometry == 1 and module.scale_for_height(height) or 1
+        if not force and state.scale and math.abs(scale - state.scale) <= 0.02 * state.scale then return false end
+        local first = state.scale == nil
+        state.display_height, state.scale = height, scale
+        state.settings = module.scale_settings(state.base_settings, scale)
+        if not first then
+            state.bar_cache, state.thumb_height, state.pixels_per_notch = nil, nil, nil
+            state.calibration = {}
+            record('geometry changed scale=%.3f height=%d window=%d strip=%d mask=%d step=%.1f', scale, height,
+                   state.settings.window, state.settings.strip_width, state.settings.cursor_mask_radius,
+                   state.settings.default_pixels_per_notch)
+            state.dirty = true
+        end
+        return true
+    end
+
     -- The window DC is roughly forty times cheaper than the desktop DC, but it
     -- can answer with a black surface (or a stale one) for an exclusive or
     -- flip-model swap chain. The first capture of the session therefore copies
@@ -1099,8 +1209,24 @@ function module.install(create_platform, environment)
         local action, reason = analysis_for(sample, cursor_x, cursor_y)
         if action then
             state.bar_cache = {left = action.bar_screen.left, right = action.bar_screen.right, at = now}
+            return action, reason
         end
-        return action, reason
+        -- A thumb taller than the strip, or a click far from it on a long list,
+        -- can leave the normal window empty. One doubled retry costs a second
+        -- capture and keeps the click; without it the press would be a no-op.
+        local retry_window = math.min(state.settings.window * 2, state.settings.window_max)
+        if retry_window <= state.settings.window then return nil, reason end
+        local wide = timed_capture(cursor_x, cursor_y, state.settings, state.settings.strip_width, retry_window)
+        if not wide then return nil, reason end
+        state.wide_retries = (state.wide_retries or 0) + 1
+        local retry_action, retry_reason = analysis_for(wide, cursor_x, cursor_y)
+        if retry_action then
+            state.bar_cache = {left = retry_action.bar_screen.left, right = retry_action.bar_screen.right, at = now}
+            record('wide retry window=%d found bar=%d,%d,%d,%d', retry_window, retry_action.bar_screen.left,
+                   retry_action.bar_screen.top, retry_action.bar_screen.right, retry_action.bar_screen.bottom)
+            return retry_action, retry_action.hit
+        end
+        return nil, retry_reason or reason
     end
 
     -- The thumb is tracked between captures: an injected notch moves it by
@@ -1269,6 +1395,7 @@ function module.install(create_platform, environment)
 
     local function handle_press(now)
         state.clicks = state.clicks + 1
+        refresh_geometry(false)
         if not state.settings.enabled then
             state.skipped = state.skipped + 1
             note('disabled')
@@ -1506,6 +1633,7 @@ function module.install(create_platform, environment)
         end
     end
 
+    refresh_geometry(true)
     state.status = state.settings.enabled and 'running' or 'disabled: config'
     log(true)
     return state

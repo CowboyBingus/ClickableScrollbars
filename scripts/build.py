@@ -28,7 +28,7 @@ _spec.loader.exec_module(_package)
 package_release = _package.package_release
 
 MODULE = 'mods/cowboybingus/clickable_scrollbars'
-REVISION = 'v2.1'
+REVISION = 'v2.2'
 DECLARATION = '-- HD2-Addon: ' + MODULE + '\n'
 SOURCE = ROOT / 'src/clickable_scrollbars.lua'
 INSPECTOR = Path(os.environ.get('HD2_PATCH_INSPECT', WORKSPACE / 'tools/bin/hd2-patch-inspect.exe'))
