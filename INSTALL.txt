@@ -1,0 +1,65 @@
+Clickable Scrollbars - v2.1
+
+Lets you click a menu scrollbar track to move the thumb to the pointer, and
+drag the thumb to scroll with the mouse, instead of only being able to use the
+mouse wheel.
+
+Requires Bingus Shared Loader v15 or newer / API 1. This addon is discovered by
+the loader through its HD2-Addon declaration; managers do not install it
+automatically.
+
+Install only through HDArsenal or HD2MM. Do not copy patch files into the game
+directory by hand: the addon must be deployed by a manager so the load order and
+the game's own files stay under the manager's control.
+
+The addon ships no DLL, does not modify the game executable or any game file,
+writes no game memory and installs no system hooks. It reads the screen,
+polls the left mouse button and injects wheel events from inside the game.
+
+INSTALL
+
+1. Close Helldivers 2.
+
+2. Import Clickable-Scrollbars-v2.1.zip into Arsenal or HD2MM, replacing any
+   older Clickable Scrollbars entry. The v1 package shipped a UI resource
+   override that cannot reach the native Armory bars; remove it.
+
+3. Enable it together with Bingus Shared Loader v15 or newer.
+
+4. With Arsenal's default priority, place the shared loader last, then
+   Purge / Deploy.
+
+5. Start the game, open the Armory and click the scrollbar track above or below
+   the thumb in any equipment list (Primary/Secondary/Throwable, Armor, Helmet,
+   Cape, Emote, Victory Pose, Player Card, Title or Career). The thumb moves so
+   its centre sits under the pointer, within half a wheel notch. Press the thumb
+   itself and it follows the mouse one-to-one.
+
+LOGS
+
+%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ClickableScrollbars.log
+
+status=      running, disabled: config, or a stop reason
+pages=       track clicks that produced wheel input
+drags=       presses that turned into a drag
+corrections= settle nudges sent after a page
+no_response= a page the list did not answer (list end, or wheel ignored)
+misses=      clicks with no recognised thumb
+capture_source= window (cheap) or screen (desktop DC) - with capture_ms_avg
+last_bar=    the thumb rectangle that was detected (screen pixels)
+last_moved=  thumb displacement measured after a page
+pixels_per_notch= median wheel step learned on this machine
+calibration= the observations that median is built from
+reason_counts= how often each decision was reached
+trace ...=   the last 48 decisions with millisecond stamps
+
+Optional settings: %LOCALAPPDATA%\ClickableScrollbars\ClickableScrollbars.ini
+(see the README table). Set enabled=0 to disable without uninstalling.
+
+UNINSTALL
+
+Disable the mod, purge the deployment, and redeploy the remaining mods. The
+addon touches no game file and writes no memory; the loader simply stops
+requiring it.
+
+Developed with assistance from GPT-6 Astra.

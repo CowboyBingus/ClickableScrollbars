@@ -1,0 +1,22 @@
+[
+  ".gitattributes",
+  ".gitignore",
+  "CHANGELOG.md",
+  "CONTRIBUTING.md",
+  "DESCRIPTION.txt",
+  "INSTALL.txt",
+  "README.md",
+  "THIRD_PARTY.md",
+  "dependencies.json",
+  "docs/RESEARCH.md",
+  "docs/VALIDATION.md",
+  "publication-files.json",
+  "scripts/build.py",
+  "scripts/package.py",
+  "scripts/privacy_audit.py",
+  "src/clickable_scrollbars.lua",
+  "tests/test_detector.lua",
+  "tests/test_install.lua",
+  "tests/test_package.py",
+  "tests/test_platform.lua"
+]

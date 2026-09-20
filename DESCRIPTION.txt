@@ -1,0 +1,1 @@
+Adds click-to-move and drag-to-scroll to the item-select scrollbars in the Armory and mission briefing, which otherwise only accept the mouse wheel.
