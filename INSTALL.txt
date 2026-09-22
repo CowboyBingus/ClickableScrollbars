@@ -1,11 +1,11 @@
-Clickable Scrollbars - v2.6
+Clickable Scrollbars - v2.8
 
 Mouse accessibility for Helldivers 2 menu scrollbars.
 Requires Bingus Shared Loader v15 or newer / API 1, installed separately.
 
 INSTALL
 1. Close Helldivers 2.
-2. Import Clickable-Scrollbars-v2.6.zip into Arsenal or HD2MM, replacing the
+2. Import Clickable-Scrollbars-v2.8.zip into Arsenal or HD2MM, replacing the
    previous standalone Clickable Scrollbars entry.
 3. Enable it together with Bingus Shared Loader v15 or newer.
 4. With Arsenal's default priority, place the shared loader last, then
@@ -14,7 +14,7 @@ INSTALL
    INI: %LOCALAPPDATA%\ClickableScrollbars\ClickableScrollbars.ini
 
 Do not enable a second copy of the addon (including a megapack copy) alongside
-this package. The separate VanillaPlusMegapack snapshot is not updated here.
+this package. Vanilla Plus Megapack v18 also includes this candidate revision.
 
 USING IT
 Grab the thumb to drag, or click the track to centre it there. A thumb click
@@ -22,17 +22,17 @@ without movement leaves the list in place. Equipment and Career follow vertical
 pointer movement regardless of horizontal position after the thumb is grabbed.
 Both clamp at the track ends and use native scrolling without wheel input.
 
-Other detected bars use wheel input and pause when the pointer leaves the
-scrollbar. That fallback has the game's wheel-step granularity. Focus loss or
-a changed native list cancels a hold. Release and grab again to start a new one.
+Unsupported or hidden menus are left alone, with no screenshot or wheel fallback.
+Focus loss or a changed native list cancels a hold. Release and grab again to
+start a new one.
 
 VALIDATION
-Offline tests pass, and v2.6 has been verified in-game.
+Offline regression tests cover v2.8; in-game verification of this update is pending.
 Windows API bindings and the interactive desktop-capture check pass.
 Supported build: Steam 24826606 / EXE 1.8.45317.0.
 
 Log: %LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ClickableScrollbars.log
-Check the v2.6 header, native_writes, native_ok, native_fallbacks, errors and trace.
+Set diagnostics=1 to collect native_writes, native_ok, errors and gesture traces.
 Test slow drags, fast drags, both ends, returning from an end, crossing the tabs,
 release over a tab, and a fresh normal tab click after release.
 
@@ -44,3 +44,7 @@ Disable the mod, purge the deployment and redeploy the remaining mods. Restart
 the game to remove the addon from the running session.
 
 Developed with assistance from GPT-6 Astra.
+
+Ordinary gameplay clicks no longer capture pixels or write routine logs.
+Only native equipment and Career scrolling is supported; no screenshot/wheel fallback.
+Set diagnostics=1 in the optional INI only when collecting interaction traces.

@@ -1,3 +1,17 @@
+# v2.8
+
+- Remove screenshot capture and routine log writes from scrollbar input.
+- Batch controller lookups to reduce native reads on ordinary clicks.
+- Preserve smooth equipment and Career dragging, sideways movement and tab protection.
+- Offline regression checks cover this update; live frame-time verification remains pending.
+
+# v2.7
+
+- Stop screenshot capture and pixel scanning during ordinary clicks or gameplay.
+- Keep native equipment and Career dragging, including sideways movement and track clicks.
+- Disable routine diagnostic disk writes by default and process input only from update.
+- Add regressions requiring zero capture and log work outside supported scrollbars.
+
 # v2.6
 
 - Fix smooth click-and-drag scrolling in equipment and Career menus.

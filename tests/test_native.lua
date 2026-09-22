@@ -54,6 +54,7 @@ local function world(state)
     u32(DISPATCH + 5864, 222)
     u64(DISPATCH + 5872, 0x2222222)
     u32(DISPATCH + 5880, 7)
+    for index=0,2 do u32(DISPATCH+5840+index*16+12,0) end
     -- The grid's own scroll model.
     u32(GRID + ROWS, state.rows or 5)
     u32(GRID + COLUMNS, state.columns or 4)
@@ -88,9 +89,18 @@ local function reader(cells)
     local api = {}
     function api.module(name) return name == 'game.dll' and GAME or nil end
     function api.read(address, size)
-        local bytes = cells[address]
-        if not bytes or #bytes < size then return nil end
-        return bytes:sub(1, size)
+        local result={}
+        for offset=0,size-1 do
+            local byte
+            for start,cell in pairs(cells) do
+                if address+offset>=start and address+offset<start+#cell then
+                    byte=cell:sub(address+offset-start+1,address+offset-start+1);break
+                end
+            end
+            if not byte then return nil end
+            result[#result+1]=byte
+        end
+        return table.concat(result)
     end
     function api.pointer(bytes, offset)
         offset = offset or 0
@@ -274,3 +284,23 @@ check('an unregistered grid is refused',
     module.native_locate(reader(empty.cells), view(empty.cells, {})) == nil)
 
 print('native grid tests passed')
+
+-- Exercise the real memory decoder: one bounded registry read even when full.
+do
+    local cells=world({}).cells
+    cells[DISPATCH+5836]=pack_u32(64)
+    for i=0,63 do
+        cells[DISPATCH+5840+i*16]=pack_u64(CONTROLLER)
+        cells[DISPATCH+5848+i*16]=pack_u32(7)
+        cells[DISPATCH+5852+i*16]=pack_u32(0)
+    end
+    local api=reader(cells);local read=api.read;local calls=0
+    api.read=function(a,n)calls=calls+1;return read(a,n)end
+    assert(not module.native_locate(api) and calls==3,'absent owner must cost three reads')
+    cells[DISPATCH+5848+63*16]=pack_u32(222)
+    cells[GRID+272+84]=pack_f32(0);calls=0
+    assert(not module.native_locate(api) and calls==5,'hidden owner must cost five reads')
+    api.read=function(a,n)if n==1024 then return string.rep('x',1023)end;return read(a,n)end
+    assert(not module.native_locate(api),'short registry snapshot must be rejected')
+end
+print('PASS: full registry batching, hidden/absent owners and truncated read refusal')

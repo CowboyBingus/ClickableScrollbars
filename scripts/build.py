@@ -29,7 +29,7 @@ _spec.loader.exec_module(_package)
 package_release = _package.package_release
 
 MODULE = 'mods/cowboybingus/clickable_scrollbars'
-REVISION = 'v2.6'
+REVISION = 'v2.8'
 # In-game confirmation applies only to these exact runtime bytes.
 VERIFIED_SOURCE_SHA256 = 'FEF9C8287C6E17DB5004EFCA4FA57372C3E663C4A622D3035895DD3D8E0268ED'
 DECLARATION = '-- HD2-Addon: ' + MODULE + '\n'
@@ -128,7 +128,7 @@ def main():
         'module': MODULE, 'declaration': DECLARATION.strip(),
         'description': 'Click a menu scrollbar track to move the thumb there, and drag the '
                        'thumb to scroll with the pointer. The armory list\'s own scroll model '
-                       'is driven directly, with wheel input as the fallback. Requires Bingus '
+                       'is driven directly. Inactive menus perform no capture or injected input. Requires Bingus '
                        'Shared Loader v15 or newer / API 1.',
         'requires': [{'name': 'Bingus Shared Loader', 'api': 1, 'revision': 'loader-v15'}],
         'mechanism': {
@@ -139,7 +139,8 @@ def main():
             'output': 'a held gesture owns its visible scrollbar regardless of horizontal '
                       'pointer position. Equipment uses animation cancellation, the scrollbar '
                       'setter and grid layout; Career uses the container position setter. '
-                      'Neither route emits wheel or button input',
+                      'Neither route emits wheel or button input; unsupported or hidden menus are inert',
+            'runtime_screen_capture': False, 'diagnostics_default': False,
             'follow_up': 'owner and layout are revalidated while held; the game-derived '
                          'visible range or rendered thumb verifies movement',
             'writes_game_memory': True, 'patches_executable_memory': False,

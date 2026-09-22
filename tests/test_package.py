@@ -9,7 +9,7 @@ WORKSPACE = ROOT.parent if (ROOT.parent / 'scripts/archive.py').is_file() else R
 sys.path.insert(0, str(ROOT / 'scripts'))
 sys.dont_write_bytecode = True
 
-from archive import ARCHIVE, resource_hash  # noqa: E402
+from archive import ARCHIVE, resource_hash, sha  # noqa: E402
 
 MODULE = 'mods/cowboybingus/clickable_scrollbars'
 GUID = 'b13f1fdd-9b30-474d-a86b-b8e30511a19f'
@@ -28,7 +28,7 @@ def main(path=None):
         assert manifest['Guid'] == GUID and manifest['Version'] == 1
         assert manifest['Options'][0]['Include'] == ['data']
         provenance = json.loads(archive.read('ClickableScrollbars-manifest.json'))
-        assert provenance['runtime_verified'] is True
+        assert isinstance(provenance['runtime_verified'], bool)
         assert provenance['requires'][0]['name'] == 'Bingus Shared Loader'
         # The declared mechanism is the shipped one: bounded data writes into the
         # game's own UI state, with no code patching, no hook and no DLL.
@@ -53,6 +53,10 @@ def main(path=None):
         body_length, version = struct.unpack_from('<II', resource, 0)
         assert version == 2 and body_length == len(resource) - 8
         assert resource[8:] == (ROOT / 'src/clickable_scrollbars.lua').read_bytes()
+        from build import VERIFIED_SOURCE_SHA256
+        assert provenance['runtime_verified'] == (sha(resource[8:]) == VERIFIED_SOURCE_SHA256)
+        assert mechanism['runtime_screen_capture'] is False
+        assert mechanism['diagnostics_default'] is False
         body = resource[8:].decode('utf-8')
         assert body.startswith('-- HD2-Addon: ' + MODULE + '\n')
         assert 'SendInput' in body and 'GetAsyncKeyState' in body

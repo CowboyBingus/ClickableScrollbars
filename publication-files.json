@@ -16,6 +16,7 @@
   "scripts/package.py",
   "scripts/privacy_audit.py",
   "src/clickable_scrollbars.lua",
+  "tests/runtime_fixture.lua",
   "tests/test_detector.lua",
   "tests/test_install.lua",
   "tests/test_native.lua",

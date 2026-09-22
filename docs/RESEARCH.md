@@ -20,9 +20,12 @@ the pixel offset and invokes the existing layout solver in that order. Career
 uses its container position setter. Neither native route emits mouse-wheel or
 button events, preventing held gestures from activating other menu controls.
 
-The fallback detector remains available for other menu bars. It uses guarded,
-quantized wheel input and only emits while the pointer remains on its original
-target. It does not provide the native routes' unrestricted horizontal drag.
+The runtime now requires native owner visibility and track geometry before it
+accepts a press. Missing or unsupported owners return without capture. Native
+verification reads the rendered thumb instead of falling back to pixel capture.
+Only update processes input; render is left untouched. Diagnostic traces and
+periodic disk writes are opt-in. Legacy detector helpers are retained for
+offline tests but are not entered by runtime gestures.
 
 The source, tests and supported game fingerprints are public. Local probes,
 screenshots, logs, extracted game data and machine details are excluded.

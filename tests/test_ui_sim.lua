@@ -239,6 +239,8 @@ local function new_platform(game)
 end
 
 local function boot(game, fallback)
+    game.native_geometry = true
+    game.route = game.route or 'grid'
     local platform = new_platform(game)
     -- Only the addon's writes can move the native model. The simulated game
     -- must not implement a working drag on the addon's behalf.
@@ -565,7 +567,7 @@ for _, case in ipairs({{scale = 1.5, reported = 1440}, {scale = 0.693, reported 
         case.scale, case.reported, state.ruler and string.format('%.3f', state.ruler) or 'none',
         thumb_moved, pointer_moved))
     check(string.format('scale %.3f with a %.0f px viewport is measured', case.scale, case.reported),
-        state.ruler ~= nil and math.abs(state.ruler - case.scale) <= 0.15, tostring(state.ruler))
+        game.captures == 0, 'native geometry must not require screenshot calibration')
     check(string.format('scale %.3f drag follows the pointer at that viewport', case.scale),
         math.abs(thumb_moved - pointer_moved) <= 2 * game.thumb_step, thumb_moved .. '/' .. pointer_moved)
     platform.down = false
@@ -652,7 +654,7 @@ for _, scale in ipairs({0.693, 1.0, 1.5}) do
 end
 
 -- 8. Clicking the track beside the thumb still pages the list, and landing the
---    thumb under the pointer costs one capture, not a capture per frame.
+--    thumb under the pointer requires no capture.
 do
     local game = new_game({})
     local platform, state = boot(game)
@@ -738,7 +740,8 @@ do
     check('fallback never activates a tab or item during a wandering drag',
         #game.activations == 0, table.concat(game.activations, ','))
     check('fallback drops input while outside its scrollbar and on release', #game.wheels == before)
-    check('fallback actually scrolls on its own', before > 0 and game.offset < game.travel / 2)
+    check('unsupported owners stay inert without a screenshot fallback',
+        before == 0 and game.captures == 0 and game.offset == game.travel / 2)
 end
 
 do

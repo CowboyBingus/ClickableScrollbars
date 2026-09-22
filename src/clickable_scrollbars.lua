@@ -1,9 +1,9 @@
 -- HD2-Addon: mods/cowboybingus/clickable_scrollbars
--- Click-to-scroll: the armory list's own scroll model is driven from the pointer,
--- with the wheel as the fallback when that model cannot be reached.
+-- Click-to-scroll: the visible menu's own scroll model follows the pointer.
+-- Unsupported or hidden menus are inert; gestures never capture or inject input.
 -- Loader-only: plaintext Lua, no DLL, no hook, no code patch. See docs/RESEARCH.md.
 
-local module = {revision = 'v2.6'}
+local module = {revision = 'v2.8'}
 
 -- The engine's UI is reachable from Lua: the armory's scrollbars are the game's own
 -- ScrollBar objects, and driving one is a data write rather than synthesised input.
@@ -307,10 +307,13 @@ function module.native_locate(api, memory)
     if not dispatch then return nil, 'dispatch table unavailable' end
     local count = memory.read_u32(dispatch + 5836)
     if not count or count < 1 or count > 64 then return nil, 'dispatch bounds changed' end
+    -- Snapshot the bounded registry once instead of a system call per row.
+    local rows = api.read(dispatch + 5840, count * 16)
+    if type(rows) ~= 'string' or #rows ~= count * 16 then return nil, 'dispatch rows unreadable' end
     for index = 0, count - 1 do
-        local row = dispatch + 5840 + index * 16
-        if memory.read_u32(row + 8) == 222 then
-            local controller = api.pointer(api.read(row, 8))
+        local offset = index * 16
+        if rows:sub(offset + 9, offset + 12) == '\222\0\0\0' then
+            local controller = api.pointer(rows, offset)
             if not controller then return nil, 'grid controller unavailable' end
             local bridge = {api = api, memory = memory, game = game, controller = controller,
                             grid = controller + GRID.offset, panel = controller + CAREER.offset}
@@ -491,7 +494,8 @@ local DEFAULTS = {
     -- Diagnostics.
     trace_lines = 48,        -- decisions kept for the log
     trace_events = 0,        -- 1 records every emission and drag step
-    log_interval_ms = 1000,  -- shortest gap between log writes
+    diagnostics = 0,         -- opt-in interaction traces and periodic disk writes
+    log_interval_ms = 5000,  -- shortest gap between log writes
     cooldown_ms = 0,         -- shortest gap between two track-click jumps
     min_capture_interval_ms = 40,
     use_window_capture = 1,  -- 1 tries the game's own window DC before the desktop DC
@@ -1449,6 +1453,7 @@ function module.install(create_platform, environment)
             state.native_reason = tostring(reason or api)
         end
     end
+    state.native_api_attempted = true
     if state.native_api then
         state.native, state.native_reason = module.native_locate(state.native_api)
         state.native_try = platform.now()
@@ -1484,6 +1489,7 @@ function module.install(create_platform, environment)
     local function log(force)
         local now = platform.now()
         if not force then
+            if state.settings.diagnostics ~= 1 then return end
             if not state.dirty then return end
             if now - last_log_ms < state.settings.log_interval_ms then return end
         end
@@ -1625,6 +1631,7 @@ function module.install(create_platform, environment)
     end
 
     local function record(fmt, ...)
+        if state.settings.diagnostics ~= 1 then return end
         local line = select('#', ...) > 0 and string.format(fmt, ...) or fmt
         trace[#trace + 1] = string.format('%d %s', math.floor(platform.now()), line)
         while #trace > state.settings.trace_lines do table.remove(trace, 1) end
@@ -2295,11 +2302,9 @@ function module.install(create_platform, environment)
             local moved = after and module.native_moved(drag.model, after)
             if not moved then
                 local distance = math.abs(drag.sent - drag.model.value) * drag.track.span
-                if distance < 3 or not budget_available(now) then return end
-                local expected = drag.track.top + drag.sent * drag.track.span + drag.track.thumb / 2
-                local observed = observe(expected)
-                if not observed then return end
-                moved = math.abs(observed - expected) <= 2
+                if distance < 3 then return end
+                -- Native geometry includes the rendered thumb. A rejected write
+                -- must never invoke screen capture to verify the same gesture.
             end
             drag.checked = true
             if moved then
@@ -2353,9 +2358,11 @@ function module.install(create_platform, environment)
     -- bounds. A stale pointer therefore costs one failed read, never a write.
     local function refresh_native(now)
         -- Measurement is kept even after a write was refused: the grid's own
-        -- geometry (content, span, value) is what tells the wheel drag where the
-        -- track actually is, and that is true whether or not the write is honoured.
+        -- geometry (content, span, value) locates the track independently of
+        -- whether a later write is honoured.
         if not state.native_api then
+            if state.native_api_attempted then return nil end
+            state.native_api_attempted = true
             local ok, api, reason = pcall(module.native_api)
             if not ok or type(api) ~= 'table' then
                 state.native_reason = tostring(reason or api)
@@ -2442,225 +2449,36 @@ function module.install(create_platform, environment)
 
     local function handle_press(now)
         state.clicks = state.clicks + 1
-        refresh_geometry(false)
-        if not state.settings.enabled then
-            state.skipped = state.skipped + 1
-            note('disabled')
-            return
-        end
-        if not platform.foreground_self() then
-            state.skipped = state.skipped + 1
-            note('not_foreground')
-            return
-        end
-        local cursor_x, cursor_y = platform.cursor()
-        if not cursor_x then
-            state.skipped = state.skipped + 1
-            note('no_cursor')
-            return
-        end
-        -- Native hit testing is independent of screenshots, cursor glow and old
-        -- cached bars. Capture one visible owner on press; subsequent frames use
-        -- only vertical displacement, even across tabs or far outside the list.
+        if not state.settings.enabled or state.settings.native ~= 1 then return end
+        if not platform.foreground_self() then return end
+        -- An absent/unsupported/hidden owner is a definitive no-op. Never scan
+        -- gameplay pixels looking for a possible scrollbar on an ordinary click.
         local native = refresh_native(now)
-        local native_track = native and platform.viewport
+        if not native then return end
+        local native_track = platform.viewport
             and module.native_screen_track(state.native_model, platform.viewport())
-        if native_track and state.settings.native == 1 then
-            thumb, jump = nil, nil
-            if cursor_x < native_track.left - 3 or cursor_x > native_track.right + 3
-                or cursor_y < native_track.top or cursor_y > native_track.top + native_track.length then
-                note('outside_native_track')
-                return
-            end
-            if state.native_failed then note('native_retired'); return end
-            local model = state.native_model
-            local top = native_track.top + model.value * native_track.span
-            local centre = top + native_track.thumb / 2
-            begin_native_drag(cursor_x, cursor_y, now, centre, native_track.thumb,
-                              native_track.left, native_track.right, nil, native_track)
-            if cursor_y < top or cursor_y > top + native_track.thumb then
-                drag.press_y = centre
-                service_native_drag(now, cursor_y)
-                state.pages = state.pages + 1
-                note('native_jump')
-            else
-                note('bar_press')
-            end
+        if not native_track then return end
+        local cursor_x, cursor_y = platform.cursor()
+        if not cursor_x then return end
+        if cursor_x < native_track.left - 3 or cursor_x > native_track.right + 3
+            or cursor_y < native_track.top or cursor_y > native_track.top + native_track.length then
             return
         end
-        -- A bar already measured needs no picture, while a track click needs a fresh model
-        -- every burst_capture_every presses.
-        local burst_hit, burst_centre = nil, nil
-        local settings_here = state.settings
-        if settings_here.burst_cache_ms > 0 and thumb
-            and cursor_x >= thumb.left - settings_here.column_tolerance
-            and cursor_x <= thumb.right + settings_here.column_tolerance then
-            burst_centre = thumb.center_y
-            local top = burst_centre - thumb.height / 2
-            local bottom = burst_centre + thumb.height / 2
-            local hit = (cursor_y >= top - settings_here.thumb_margin
-                and cursor_y <= bottom + settings_here.thumb_margin) and 'thumb' or 'track'
-            local fresh = now - thumb.observed_at <= settings_here.burst_cache_ms
-            local moved = injected_total ~= thumb.injected_at
-            if fresh and (hit == 'thumb'
-                or not moved or (state.burst_run or 0) < settings_here.burst_capture_every) then
-                burst_hit = hit
-            end
-        end
-        if burst_hit then
-            state.burst_skips = (state.burst_skips or 0) + 1
-            state.burst_run = (state.burst_run or 0) + 1
-            state.last_bar = {left = thumb.left, right = thumb.right,
-                              top = burst_centre - thumb.height / 2, bottom = burst_centre + thumb.height / 2}
-            state.last_thumb_masked = false
-            jump = nil
-            record('burst click x=%d y=%d hit=%s centre=%.1f skips=%d', cursor_x, cursor_y, burst_hit,
-                   burst_centre, state.burst_skips)
-            if burst_hit == 'thumb' then
-                -- The native route first: the list's own value is what moves, so
-                -- nothing is injected and nothing else can be pressed. It only
-                -- answers while the game itself answers the write.
-                local measured = refresh_native(now)
-                local measured_track = measured and module.native_track(state.native_model,
-                    burst_centre - thumb.height / 2, thumb.height)
-                if measured and not state.native_failed and state.settings.native == 1
-                    and begin_native_drag(cursor_x, cursor_y, now, burst_centre, thumb.height,
-                                          thumb.left, thumb.right, state.bar_side) then
-                    note('bar_press')
-                    return
-                end
-                -- The wheel drag is the fallback the addon has always shipped: it
-                -- is armed whenever the native route is not driving, with or
-                -- without the loader's bridge. Leaving it behind the bridge turned
-                -- every bar press into a no-op in game.
-                begin_drag(cursor_x, cursor_y, now, thumb.left, thumb.right, state.bar_side, true,
-                           measured_track)
-                note('bar_press')
-                return
-            end
-            if not (refresh_native(now) and native_jump(cursor_y, state.last_bar, now)) then
-                start_jump(cursor_y, burst_centre, now)
-            end
-            return
-        end
-        state.burst_run = 0
-        if now - last_capture_ms < state.settings.min_capture_interval_ms then
-            state.skipped = state.skipped + 1
-            note('rate_limited')
-            return
-        end
-        if not budget_available(now) then
-            -- The addon has already spent its share of this second on captures.
-            -- Dropping the click is a no-op; taking the capture would be a hitch.
-            state.budget_skips = (state.budget_skips or 0) + 1
-            state.skipped = state.skipped + 1
-            note('budget')
-            return
-        end
-        last_capture_ms = now
-        local action, reason = capture_analysis(cursor_x, cursor_y, now)
-        note(reason or 'none')
-        if not action and thumb and now - thumb.observed_at <= state.settings.bar_cache_ms
-            and cursor_x >= thumb.left - state.settings.column_tolerance
-            and cursor_x <= thumb.right + state.settings.column_tolerance
-            and math.abs(cursor_y - thumb.center_y) <= thumb.height / 2 then
-            -- The bar is under the cursor but the glow hid it: fall back to the
-            -- tracked geometry so the press still grabs the bar.
-            local center = thumb.center_y
-            action = {hit = 'thumb', bar = {masked = true},
-                      cached = true,
-                      bar_screen = {left = thumb.left, right = thumb.right,
-                                    top = center - thumb.height / 2,
-                                    bottom = center + thumb.height / 2,
-                                    side = state.bar_side}}
-            note('thumb_cached')
-        end
-        if not action then
-            state.misses = state.misses + 1
-            state.last_bar = nil
-            record('click x=%d y=%d refused=%s pixel=%s bar=%s', cursor_x, cursor_y, tostring(reason),
-                   state.last_click_luma and string.format('%.0f', state.last_click_luma) or 'none',
-                   state.last_bar_luma and string.format('%.0f', state.last_bar_luma) or 'none')
-            return
-        end
-        local bar = action.bar_screen
-        local run_height = bar.bottom - bar.top + 1
-        local known_height = state.thumb_height
-        local centre = (bar.top + bar.bottom) / 2
-        if state.bar_cache and math.abs(state.bar_cache.left - bar.left) > 6 then
-            -- A different column: any learned thumb height belonged to the old bar.
-            state.thumb_height, known_height = nil, nil
-        end
-        if not action.cached then
-            -- The glow can hide one end of the thumb; when the height is known
-            -- the hidden end is inferred from the visible one, so a press on or
-            -- beside the bar still aims at its true centre.
-            if action.bar.clipped_top and not action.bar.clipped_bottom and known_height then
-                centre = bar.bottom - known_height / 2
-            elseif action.bar.clipped_bottom and not action.bar.clipped_top and known_height then
-                centre = bar.top + known_height / 2
-            end
-            if not action.bar.clipped_top and not action.bar.clipped_bottom and run_height >= 20 then
-                state.thumb_height, known_height = run_height, run_height
-            end
-            -- The bar's own thickness is the interface ruler: 10 px on the machine
-            -- every constant here was measured on, and a fixed part of the
-            -- interface everywhere else (see default_pixels_per_notch).
-            local run_width = bar.right - bar.left + 1
-            if run_width >= 4 then
-                -- The bar's thickness against its reference thickness is the
-                -- interface scale: the geometry and the wheel step the drag works
-                -- from both follow it from the next press on (refresh_geometry).
-                state.ruler = run_width / state.settings.bar_reference_width
-                state.ruler_height = state.display_height
-            end
-            thumb = {left = bar.left, right = bar.right, height = known_height or run_height,
-                     observed_y = centre, observed_at = now, injected_at = injected_total, center_y = centre}
-        elseif thumb and math.abs(thumb.left - bar.left) > 6 then
-            thumb = nil
-        elseif thumb then
-            centre = thumb.center_y
-        end
-        state.last_bar = bar
-        state.last_thumb_masked = action.bar.masked and true or false
-        -- Which side of the bar the list is on, for the next drag's sideways band.
-        -- The burst path has no capture of its own, so it reuses this one.
-        if bar.side then state.bar_side = bar.side end
-        check_track_bounds(centre, thumb and thumb.height or (bar.bottom - bar.top + 1))
-        if state.track_column and math.abs(state.track_column - bar.left) > 6 then
-            -- A different column: the learned ends of the old track mean nothing.
-            state.track_top, state.track_bottom, state.track_column = nil, nil, nil
-        end
-        jump = nil
-        record('click x=%d y=%d hit=%s bar=%d,%d,%d,%d masked=%s per_notch=%.1f', cursor_x, cursor_y,
-               tostring(action.hit), bar.left, bar.top, bar.right, bar.bottom,
-               tostring(action.bar.masked), per_notch())
-        if action.hit == 'thumb' then
-            -- The thumb: on the native route the list's own value follows the pointer,
-            -- so the gesture is a real scrollbar drag with no input at all.
-            local measured = refresh_native(now)
-            local measured_track = measured and module.native_track(state.native_model,
-                centre - (known_height or run_height) / 2, known_height or run_height)
-            if measured and not state.native_failed and state.settings.native == 1
-                and begin_native_drag(cursor_x, cursor_y, now, centre, known_height or run_height,
-                                      bar.left, bar.right, bar.side) then
-                note('bar_press')
-                return
-            end
-            -- Otherwise the engine does not drag the bar in practice, so the addon
-            -- does, while the pointer remains in the guarded scrollbar area.
-            begin_drag(cursor_x, cursor_y, now, bar.left, bar.right, bar.side, nil, measured_track)
+        if state.native_failed then return end
+        thumb, jump = nil, nil
+        local model = state.native_model
+        local top = native_track.top + model.value * native_track.span
+        local centre = top + native_track.thumb / 2
+        begin_native_drag(cursor_x, cursor_y, now, centre, native_track.thumb,
+                          native_track.left, native_track.right, nil, native_track)
+        if cursor_y < top or cursor_y > top + native_track.thumb then
+            drag.press_y = centre
+            service_native_drag(now, cursor_y)
+            state.pages = state.pages + 1
+            note('native_jump')
+        else
             note('bar_press')
-            return
         end
-        -- A press beside the bar is the native page jump: one write, the pointer's
-        -- height becoming the list's value.
-        if refresh_native(now) and native_jump(cursor_y, bar, now) then
-            log(false)
-            return
-        end
-        start_jump(cursor_y, centre, now)
-        log(false)
     end
 
     local function frame()
@@ -2676,7 +2494,7 @@ function module.install(create_platform, environment)
         end
         last_frame_ms = now
         state.frames = state.frames + 1
-        state.last_key = platform.key_state and platform.key_state() or 0
+        state.last_key = state.settings.diagnostics == 1 and platform.key_state and platform.key_state() or 0
         local down = platform.pressed()
         if down then state.down_frames = state.down_frames + 1 end
         local was_down = last_button
@@ -2688,7 +2506,6 @@ function module.install(create_platform, environment)
             drag, thumb, jump, state.drag_active = nil, nil, nil, false
             state.pending_click, state.pending_units, state.pending_native, state.wheel_target = nil, nil, nil, nil
             state.bar_cache = nil
-            if pressed then handle_press(now) end
             log(false)
             return
         end
@@ -3020,17 +2837,8 @@ function module.install(create_platform, environment)
         end
     end
 
-    -- The engine also drives a per-frame render callback. Running the same
-    -- frame body there keeps the addon alive if a future build stops calling
-    -- the Lua update global; the millisecond guard collapses duplicates.
-    local previous_render = rawget(environment, 'render')
-    if type(previous_render) == 'function' then
-        environment.render = function(...)
-            if not stopped then guard('render') end
-            return previous_render(...)
-        end
-    end
-
+    -- Only update owns input processing. Running it again from render can
+    -- double the native reads and log work within a single displayed frame.
     refresh_geometry(true)
     state.status = state.settings.enabled and 'running' or 'disabled: config'
     log(true)

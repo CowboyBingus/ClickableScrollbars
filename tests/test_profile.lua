@@ -246,62 +246,6 @@ local function boot(platform)
     return environment, state
 end
 
-print('runtime hotspots:')
-local idle_platform = fake_platform()
-local idle_environment = boot(idle_platform)
-bench('idle update frame (no input)', 20000, function()
-    idle_platform.state.now = idle_platform.state.now + 1
-    idle_environment.update(0.016)
-end)
-
-local drag_platform = fake_platform()
-local drag_environment, drag_state = boot(drag_platform)
-drag_platform.state.down = true
-drag_platform.state.cursor = {x = 886, y = 600}
-drag_platform.state.now = drag_platform.state.now + 1
-drag_environment.update(0.016)
-drag_platform.state.cursor = {x = 886, y = 700}
-drag_platform.state.now = drag_platform.state.now + 1
-drag_environment.update(0.016)
-local drag_frames = bench('drag frame (moving pointer)', 20000, function()
-    drag_platform.state.cursor = {x = 886, y = drag_platform.state.cursor.y + 2}
-    drag_platform.state.now = drag_platform.state.now + 1
-    drag_environment.update(0.016)
-end)
-check('a drag frame costs well under a millisecond', drag_frames <= 200,
-    string.format('%.1f us', drag_frames))
--- A hold on the thumb drags. The native route drives the armory grid's own scroll
--- value when a grid resolved; with neither a grid nor the loader's bridge - as in
--- this harness - the wheel drag is the actuator, and it must inject while the
--- button is held. The earlier build left that gesture inert.
-check('a held thumb drags through the wheel path', #drag_platform.wheels > 0, #drag_platform.wheels)
-drag_platform.state.down = false
-drag_platform.state.now = drag_platform.state.now + 1
-drag_environment.update(0.016)
-drag_platform.state.now = drag_platform.state.now + 1
-drag_environment.update(0.016)
-check('the release ends the drag', drag_state.last_reason == 'drag_end'
-    or drag_state.last_reason == 'native_release', drag_state.last_reason)
-
--- A click that never moves is the wheel path's own case: the press asked for a
--- page, no drag was armed, and the notches leave on the frame after the release.
-local click_platform = fake_platform()
-local click_environment = boot(click_platform)
-click_platform.state.down = true
-click_platform.state.cursor = {x = 886, y = 780}
-click_platform.state.now = click_platform.state.now + 1
-click_environment.update(0.016)
-click_platform.state.down = false
-click_platform.state.now = click_platform.state.now + 1
-click_environment.update(0.016)
-click_platform.state.now = click_platform.state.now + 1
-click_environment.update(0.016)
-check('a click that never moves still pages', #click_platform.wheels > 0, #click_platform.wheels)
-
--- The press path is the expensive one because it may capture; the burst model
--- should keep a repeated press free.
-local spam_platform = fake_platform()
-local spam_environment, spam_state = boot(spam_platform)
 local function press(platform, environment, x, y)
     platform.state.down = false
     platform.state.now = platform.state.now + 1
@@ -311,12 +255,27 @@ local function press(platform, environment, x, y)
     platform.state.down = true
     environment.update(0.016)
 end
-press(spam_platform, spam_environment, 886, 600)
-local burst_press = bench('press answered by the burst model', 5000, function()
-    press(spam_platform, spam_environment, 886, 600)
+
+print('runtime hotspots:')
+local fixture = assert(loadfile(assert(arg[0]:match('^(.*)[/\\]')) .. '/runtime_fixture.lua'))()
+local idle = fixture(module, {visible=false})
+bench('idle update frame (no input)', 20000, function() idle.tick(1) end)
+check('idle performs no searches or captures', idle.resolves == 1 and idle.captures == 0)
+local active = fixture(module)
+active.press()
+local y = 600
+local drag_frames = bench('native drag frame (moving pointer)', 20000, function()
+    y = y == 600 and 601 or 600
+    active.move(-2000, y)
 end)
-check('a burst press is nearly free', burst_press <= 150, string.format('%.1f us', burst_press))
-check('the burst model answered every press', spam_state.burst_skips >= 4000, spam_state.burst_skips)
+check('a drag frame costs well under a millisecond', drag_frames <= 200, string.format('%.1f us', drag_frames))
+check('a native drag writes without capture or wheel input', active.writes > 0 and active.captures == 0 and active.wheels == 0)
+active.release()
+check('release ends native ownership', not active.state.drag_active)
+local outside = fixture(module, {visible=false})
+local press_cost = bench('ordinary click with no visible menu', 5000, function() outside.press(200,600) end)
+check('ordinary click remains bounded', press_cost <= 150, string.format('%.1f us',press_cost))
+check('ordinary clicks never capture or log', outside.captures == 0 and outside.logs == 0)
 
 -- --------------------------------------------------------- 3. hostile samples
 
