@@ -1,0 +1,2 @@
+- Update compatibility for game build 25327279.
+- Restore scrollbar track clicks and dragging on updated equipment lists.

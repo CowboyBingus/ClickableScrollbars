@@ -8,6 +8,8 @@
   "README.md",
   "THIRD_PARTY.md",
   "dependencies.json",
+  "docs/MIGRATION_VALIDATION.md",
+  "docs/RELEASE_NOTES.md",
   "docs/RESEARCH.md",
   "docs/VALIDATION.md",
   "publication-files.json",

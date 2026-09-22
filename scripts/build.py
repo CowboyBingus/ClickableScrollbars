@@ -29,7 +29,7 @@ _spec.loader.exec_module(_package)
 package_release = _package.package_release
 
 MODULE = 'mods/cowboybingus/clickable_scrollbars'
-REVISION = 'v2.8'
+REVISION = 'v2.10'
 # In-game confirmation applies only to these exact runtime bytes.
 VERIFIED_SOURCE_SHA256 = 'FEF9C8287C6E17DB5004EFCA4FA57372C3E663C4A622D3035895DD3D8E0268ED'
 DECLARATION = '-- HD2-Addon: ' + MODULE + '\n'
@@ -133,7 +133,7 @@ def main():
         'requires': [{'name': 'Bingus Shared Loader', 'api': 1, 'revision': 'loader-v15'}],
         'mechanism': {
             'input': 'left-button press, cursor position',
-            'detection': 'the Armory controller is resolved from dispatch kind 222; '
+            'detection': 'the Armory controller is resolved from dispatch kind 224; '
                          'resolved visibility selects equipment or Career. Native widget '
                          'transforms provide the track bounds and thumb size',
             'output': 'a held gesture owns its visible scrollbar regardless of horizontal '

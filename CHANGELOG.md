@@ -1,3 +1,8 @@
+# v2.10
+
+- Update compatibility for game build 25327279.
+- Restore scrollbar track clicks and dragging on updated equipment lists.
+
 # v2.8
 
 - Remove screenshot capture and routine log writes from scrollbar input.

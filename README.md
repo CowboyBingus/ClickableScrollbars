@@ -1,7 +1,10 @@
-# Clickable Scrollbars — v2.8
+The UI repair updates controller registration for build 25327279. A live read-only Armory capture resolves the 55-item grid and scrollbar geometry. Offline interaction tests pass; clicking and dragging the installed repair still need in-game confirmation.
+
+
+# Clickable Scrollbars — v2.10
 
 Adds smooth click-and-drag scrolling to Helldivers 2 equipment and Career menus.
-Requires Bingus Shared Loader v15 or newer / API 1.
+Requires Bingus Shared Loader v16 or newer / API 1.
 
 - Grab the thumb and move vertically anywhere horizontally. The original grab point stays fixed.
 - Click the track to centre the thumb there, then keep holding to drag.
@@ -11,9 +14,9 @@ Requires Bingus Shared Loader v15 or newer / API 1.
 
 ## Install
 
-Close the game, replace the previous standalone package with `Clickable-Scrollbars-v2.8.zip` in Arsenal or HD2MM, enable it with Bingus Shared Loader v15+, then Purge / Deploy. With Arsenal's default priority, put the loader last. Use one mod manager and one copy of this addon.
+Close the game, replace the previous standalone package with `Clickable-Scrollbars-v2.10.zip` in Arsenal or HD2MM, enable it with Bingus Shared Loader v16+, then Purge / Deploy. With Arsenal's default priority, put the loader last. Use one mod manager and one copy of this addon.
 
-Vanilla Plus Megapack v19 and its Rows variant bundle the same candidate source.
+Vanilla Plus Megapack v26 and its Rows variant include this version.
 
 ## Settings
 
@@ -32,7 +35,7 @@ Legacy pixel-detector settings no longer affect runtime interaction. An old `nat
 
 ## Validation
 
-Supported game: Steam build 24826606 / EXE 1.8.45317.0. Offline tests cover native interaction, hidden owners, gameplay clicks, callback preservation, bounded work and archive integrity. v2.6 received user confirmation in-game; the changed v2.8 source still needs in-game confirmation. See [validation](docs/VALIDATION.md).
+Supported game: Steam build 25327279 / EXE 1.8.45850.0. Offline tests cover native interaction, hidden owners, gameplay clicks, callback preservation, bounded work and archive integrity. v2.6 received user confirmation in-game; the changed v2.10 source still needs in-game confirmation. See [validation](docs/VALIDATION.md).
 
 Diagnostic output, when enabled, goes to `%LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs/ClickableScrollbars.log`. Startup, shutdown and actual errors can still write a log. Private logs and machine details are excluded from releases.
 
@@ -40,4 +43,6 @@ Run `python -B scripts/build.py` to build. See [build instructions](CONTRIBUTING
 
 AI-assisted development with GPT-6 Astra. This is an unofficial mod.
 
-Release **v2.8** includes input/performance fixes. Offline checks cover this revision; in-game frame-time validation is pending.
+See [validation coverage](docs/MIGRATION_VALIDATION.md) for the scope of the release checks.
+
+Current version: **v2.10**, for game build **25327279**. See [changes](CHANGELOG.md) and [validation coverage](docs/MIGRATION_VALIDATION.md).

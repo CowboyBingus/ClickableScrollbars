@@ -1,7 +1,7 @@
 -- Offline model of the armory grid's own scroll model.
 --
 -- The offsets and the semantics under test were read out of the shipped build
--- (Steam 24826606, game.dll CC75948D...):
+-- (Steam 25327279, game.dll 73374BD4...):
 --   controller + 523752        the item grid
 --   grid + 597772              visible row slots
 --   grid + 600452              items in the open category
@@ -45,16 +45,16 @@ local function world(state)
     local u32 = function(address, value) put(address, pack_u32(value)) end
     local u64 = function(address, value) put(address, pack_u64(value)) end
     local f32 = function(address, value) put(address, pack_f32(value)) end
-    -- The grid controller registers itself as kind 222 in the dispatch table.
-    u64(GAME + 0x276cb80, DISPATCH)
-    u32(DISPATCH + 5836, 3)
-    u64(DISPATCH + 5840, 0x1111111)
-    u32(DISPATCH + 5848, 12)
-    u64(DISPATCH + 5856, CONTROLLER)
-    u32(DISPATCH + 5864, 222)
-    u64(DISPATCH + 5872, 0x2222222)
-    u32(DISPATCH + 5880, 7)
-    for index=0,2 do u32(DISPATCH+5840+index*16+12,0) end
+    -- The grid controller registers itself as kind 224 in the dispatch table.
+    u64(GAME + 0x3326e68, DISPATCH)
+    u32(DISPATCH + 5740, 3)
+    u64(DISPATCH + 5744, 0x1111111)
+    u32(DISPATCH + 5752, 12)
+    u64(DISPATCH + 5760, CONTROLLER)
+    u32(DISPATCH + 5768, 224)
+    u64(DISPATCH + 5776, 0x2222222)
+    u32(DISPATCH + 5784, 7)
+    for index=0,2 do u32(DISPATCH+5744+index*16+12,0) end
     -- The grid's own scroll model.
     u32(GRID + ROWS, state.rows or 5)
     u32(GRID + COLUMNS, state.columns or 4)
@@ -279,7 +279,7 @@ end
 
 -- 8. An unregistered grid never resolves, so nothing can be written.
 local empty = world({})
-empty.cells[DISPATCH + 5864] = nil
+empty.cells[DISPATCH + 5768] = nil
 check('an unregistered grid is refused',
     module.native_locate(reader(empty.cells), view(empty.cells, {})) == nil)
 
@@ -288,16 +288,16 @@ print('native grid tests passed')
 -- Exercise the real memory decoder: one bounded registry read even when full.
 do
     local cells=world({}).cells
-    cells[DISPATCH+5836]=pack_u32(64)
+    cells[DISPATCH+5740]=pack_u32(64)
     for i=0,63 do
-        cells[DISPATCH+5840+i*16]=pack_u64(CONTROLLER)
-        cells[DISPATCH+5848+i*16]=pack_u32(7)
-        cells[DISPATCH+5852+i*16]=pack_u32(0)
+        cells[DISPATCH+5744+i*16]=pack_u64(CONTROLLER)
+        cells[DISPATCH+5752+i*16]=pack_u32(7)
+        cells[DISPATCH+5756+i*16]=pack_u32(0)
     end
     local api=reader(cells);local read=api.read;local calls=0
     api.read=function(a,n)calls=calls+1;return read(a,n)end
     assert(not module.native_locate(api) and calls==3,'absent owner must cost three reads')
-    cells[DISPATCH+5848+63*16]=pack_u32(222)
+    cells[DISPATCH+5752+63*16]=pack_u32(224)
     cells[GRID+272+84]=pack_f32(0);calls=0
     assert(not module.native_locate(api) and calls==5,'hidden owner must cost five reads')
     api.read=function(a,n)if n==1024 then return string.rep('x',1023)end;return read(a,n)end

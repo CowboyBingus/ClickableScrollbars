@@ -1,50 +1,16 @@
-Clickable Scrollbars - v2.8
+Clickable Scrollbars v2.10
 
-Mouse accessibility for Helldivers 2 menu scrollbars.
-Requires Bingus Shared Loader v15 or newer / API 1, installed separately.
+Supports Helldivers 2 Steam build 25327279 / game 1.8.45850.0.
+Requires Bingus Shared Loader v16 or newer / API 1.
 
-INSTALL
-1. Close Helldivers 2.
-2. Import Clickable-Scrollbars-v2.8.zip into Arsenal or HD2MM, replacing the
-   previous standalone Clickable Scrollbars entry.
-3. Enable it together with Bingus Shared Loader v15 or newer.
-4. With Arsenal's default priority, place the shared loader last, then
-   Purge / Deploy. Use one manager; do not copy patch files into the game folder.
-5. If an old diagnostic INI contains native=0, remove that line or set native=1.
-   INI: %LOCALAPPDATA%\ClickableScrollbars\ClickableScrollbars.ini
+1. Close Helldivers 2 and use one mod manager.
+2. Replace the previous package with Clickable-Scrollbars-v2.10.zip.
+3. Enable this package and Bingus Shared Loader.
+4. With Arsenal's default priority, put the loader last (at the bottom).
+   With first-mod priority enabled, put the loader first.
+5. Purge / Deploy, then start the game normally.
 
-Do not enable a second copy of the addon (including a megapack copy) alongside
-this package. Vanilla Plus Megapack v18 also includes this candidate revision.
+To remove or change options, close the game, disable the package, and
+Purge / Deploy again. Keep the loader enabled while other mods need it.
 
-USING IT
-Grab the thumb to drag, or click the track to centre it there. A thumb click
-without movement leaves the list in place. Equipment and Career follow vertical
-pointer movement regardless of horizontal position after the thumb is grabbed.
-Both clamp at the track ends and use native scrolling without wheel input.
-
-Unsupported or hidden menus are left alone, with no screenshot or wheel fallback.
-Focus loss or a changed native list cancels a hold. Release and grab again to
-start a new one.
-
-VALIDATION
-Offline regression tests cover v2.8; in-game verification of this update is pending.
-Windows API bindings and the interactive desktop-capture check pass.
-Supported build: Steam 24826606 / EXE 1.8.45317.0.
-
-Log: %LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ClickableScrollbars.log
-Set diagnostics=1 to collect native_writes, native_ok, errors and gesture traces.
-Test slow drags, fast drags, both ends, returning from an end, crossing the tabs,
-release over a tab, and a fresh normal tab click after release.
-
-The addon is plaintext Lua. Native scrolling writes UI data and invokes the
-existing layout solver; it installs no system hooks or executable patches.
-
-UNINSTALL
-Disable the mod, purge the deployment and redeploy the remaining mods. Restart
-the game to remove the addon from the running session.
-
-Developed with assistance from GPT-6 Astra.
-
-Ordinary gameplay clicks no longer capture pixels or write routine logs.
-Only native equipment and Career scrolling is supported; no screenshot/wheel fallback.
-Set diagnostics=1 in the optional INI only when collecting interaction traces.
+Logs: %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs

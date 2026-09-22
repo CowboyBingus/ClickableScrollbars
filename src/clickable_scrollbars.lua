@@ -3,12 +3,12 @@
 -- Unsupported or hidden menus are inert; gestures never capture or inject input.
 -- Loader-only: plaintext Lua, no DLL, no hook, no code patch. See docs/RESEARCH.md.
 
-local module = {revision = 'v2.8'}
+local module = {revision = 'v2.10'}
 
 -- The engine's UI is reachable from Lua: the armory's scrollbars are the game's own
 -- ScrollBar objects, and driving one is a data write rather than synthesised input.
--- Anchors are the ones the shipped Armory mods use (game+0x277fdc8 is the UI root,
--- game+0x276cb80 the dispatch table); nothing is written until the object is found.
+-- Anchors are the ones the shipped Armory mods use (game+0x347cd90 is the UI root,
+-- game+0x3326e68 the dispatch table); nothing is written until the object is found.
 function module.ui_bridge(create_api)
     if type(create_api) ~= 'function' then return nil, 'no api factory' end
     local ok, api = pcall(create_api)
@@ -18,8 +18,8 @@ function module.ui_bridge(create_api)
         local game = api.module('game.dll')
         if not game then return nil, 'game.dll unavailable' end
         local bridge = {api = api, game = game}
-        bridge.ui = api.pointer(api.read(game + 0x277fdc8, 8))
-        bridge.dispatch = api.pointer(api.read(game + 0x276cb80, 8))
+        bridge.ui = api.pointer(api.read(game + 0x347cd90, 8))
+        bridge.dispatch = api.pointer(api.read(game + 0x3326e68, 8))
         return bridge
     end)
     if not ok2 then return nil, tostring(result) end
@@ -61,12 +61,12 @@ local GRID = {
 local CAREER = {offset = 318472, list = 2488, track = 195256, thumb = 195808,
                 thumb_height = 196148, enabled = 196089, padding = 4}
 local GRID_SOLVER, SCROLL_SET, POSITION_SET, ANIMATION_STOP =
-    0x1622850, 0x14e57b0, 0x11a61c0, 0x1198860
+    0x18d2a90, 0x1794460, 0x1447610, 0x1439cb0
 module.native_signatures = {
     {GRID_SOLVER, '488bc45355565741544155415641574881ecf800000083b9'},
-    {SCROLL_SET, '0f57d20f2fd1770cf30f1015f06dc300f30f5dd1f30f1081'},
+    {SCROLL_SET, '0f57d20f2fd1770cf30f1015f028c300f30f5dd1f30f1081'},
     {POSITION_SET, '48895c241848896c24204889542410565741574883ec20f3'},
-    {ANIMATION_STOP, '40534883ec40488b05a3b71f014833c448894424300fb601'},
+    {ANIMATION_STOP, '40534883ec40488b05532320014833c448894424300fb601'},
 }
 
 local function native_key(pointer)
@@ -296,23 +296,23 @@ function module.native_api()
 end
 
 -- Resolve the live armory grid: the dispatch table the shipped Armory mods read
--- lists every registered controller; kind 222 is the item grid.
+-- lists every registered controller; kind 224 is the item grid in build 25327279.
 function module.native_locate(api, memory)
     if type(api) ~= 'table' then return nil, 'no reader' end
     memory = memory or module.native_memory(api)
     if not memory then return nil, 'no memory view' end
     local game = api.module('game.dll')
     if not game then return nil, 'game.dll unavailable' end
-    local dispatch = api.pointer(api.read(game + 0x276cb80, 8))
+    local dispatch = api.pointer(api.read(game + 0x3326e68, 8))
     if not dispatch then return nil, 'dispatch table unavailable' end
-    local count = memory.read_u32(dispatch + 5836)
+    local count = memory.read_u32(dispatch + 5740)
     if not count or count < 1 or count > 64 then return nil, 'dispatch bounds changed' end
     -- Snapshot the bounded registry once instead of a system call per row.
-    local rows = api.read(dispatch + 5840, count * 16)
+    local rows = api.read(dispatch + 5744, count * 16)
     if type(rows) ~= 'string' or #rows ~= count * 16 then return nil, 'dispatch rows unreadable' end
     for index = 0, count - 1 do
         local offset = index * 16
-        if rows:sub(offset + 9, offset + 12) == '\222\0\0\0' then
+        if rows:sub(offset + 9, offset + 12) == '\224\0\0\0' then
             local controller = api.pointer(rows, offset)
             if not controller then return nil, 'grid controller unavailable' end
             local bridge = {api = api, memory = memory, game = game, controller = controller,
