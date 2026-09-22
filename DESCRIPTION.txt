@@ -1,1 +1,1 @@
-Adds click-to-move and drag-to-scroll to the item-select scrollbars in the Armory and mission briefing, which otherwise only accept the mouse wheel.
+Mouse accessibility for equipment and Career scrollbars: grab the thumb and move vertically anywhere horizontally, with track clicks and clamped ends. Other detected menu bars retain a restricted wheel fallback. Requires Bingus Shared Loader v15+. v2.6 is verified in-game.

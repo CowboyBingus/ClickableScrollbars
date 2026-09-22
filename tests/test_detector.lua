@@ -1,7 +1,4 @@
--- Detection tests for the Clickable Scrollbars addon.
---
--- The strips are synthetic, modelled on the measured Armory and Career bars
--- (uniform grey thumb, 9-14 px wide, dark panel either side, cursor overlay).
+-- Detector tests on synthetic frames, plus settings parsing and scaling.
 
 package.path = (arg and arg[1] or '.') .. '/?.lua;' .. package.path
 
@@ -199,6 +196,28 @@ check('coloured band outside the pointer splits the body', break_found ~= nil
     and (break_found.bottom <= 175 or break_found.top >= 197),
     break_found and (break_found.top .. '..' .. break_found.bottom))
 
+-- 21b. Which side of the bar holds the list, from the structure beside it: the
+--      panel's own gradient must not count as content.
+local sides = {
+    {name = 'artwork left', side = 'left', patches = {
+        {30, 41, 60, 300, 149, 149, 149}, {0, 12, 80, 280, 200, 200, 200}}},
+    {name = 'artwork right', side = 'right', patches = {
+        {30, 41, 60, 300, 149, 149, 149}, {60, 75, 80, 280, 200, 200, 200}}},
+    {name = 'panel both sides', side = nil, patches = {
+        {30, 41, 60, 300, 149, 149, 149}}},
+    {name = 'brightness step right is content', side = 'right', patches = {
+        {30, 41, 60, 300, 149, 149, 149}, {59, 79, 0, 400, 70, 70, 70}}},
+    {name = 'a shaded panel is not content', side = nil, patches = {
+        {30, 41, 60, 300, 149, 149, 149}}, shaded = true},
+}
+for _, case in ipairs(sides) do
+    local background = case.shaded and {60, 60, 60} or {45, 45, 45}
+    local frame = sample(80, 400, background, case.patches)
+    local action = module.analyse(frame, {x = 35, y = 200}, options)
+    local got = action and action.bar.side or nil
+    check('side detection: ' .. case.name, got == case.side, tostring(got))
+end
+
 -- 22. Geometry follows the display height: the constants were measured on a
 --     1440 px tall viewport, so a 2160p viewport must scale them and a 720p one
 --     must shrink them.
@@ -220,9 +239,15 @@ check('pointer box scales with the display', big.cursor_mask_radius == 108
     big.cursor_mask_radius)
 check('bar size limits scale with the display', big.max_width == 42 and big.min_width == 9
     and big.min_height == 66, big.max_width .. '/' .. big.min_width .. '/' .. big.min_height)
-check('step seed and tolerances scale', math.abs(big.default_pixels_per_notch - 19.5) < 0.001
+-- The wheel step is *not* display-scaled: the live machine showed the same 13 px
+-- step with a 1440 px client and a 998 px one, so the seed stays at the measured
+-- reference value and is scaled at use time by the bar's measured thickness.
+check('tolerances scale but the step seed does not', big.default_pixels_per_notch == 13
     and big.center_tolerance == 6 and big.drag_threshold == 15,
     big.default_pixels_per_notch .. '/' .. big.center_tolerance)
+check('the reference bar thickness is a setting', reference.bar_reference_width == 10
+    and reference.drag_column_margin == 2.8,
+    reference.bar_reference_width .. '/' .. reference.drag_column_margin)
 check('brightness and timing do not scale', big.min_luma == 105 and big.max_luma == 220
     and big.jump_max_notches == 120 and big.settle_delay_ms == 200 and big.max_spread == 18)
 

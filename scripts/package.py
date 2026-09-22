@@ -37,6 +37,7 @@ def package_release(root: Path, build: Path, report: dict) -> Path:
         'game_exe_sha256': report['game_exe_sha256'],
         'game_dll_sha256': report['game_dll_sha256'],
         'runtime_verified': report['runtime_verified'],
+        'desktop_capture_verified': report.get('desktop_capture_verified', False),
         'files': {name: digest(data) for name, data in files.items()},
     }
     for key in ('requires', 'provides', 'mechanism'):

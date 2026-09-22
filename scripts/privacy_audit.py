@@ -22,6 +22,7 @@ PATTERNS = {
     'unc_path': r'\\\\[a-zA-Z0-9][a-zA-Z0-9_.-]+\\[a-zA-Z0-9_$-]+',
     'email': r'\b[A-Za-z0-9_.+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b',
     'account_id': r'\b(?:7656119\d{10}|S-1-5-21-(?:\d+-){2}\d+(?:-\d+)?)\b',
+    'hardware_detail': r'(?i)\b(?:nvid[i]a|gefor[c]e|rade[o]n|ryz[e]n|rtx\s*\d|gtx\s*\d|intel\s+(?:core|xeon)|\d+\s*(?:GB|GiB)\s+(?:RAM|VRAM)|(?:cpu|gpu|motherboard|monitor)\s*model|serial\s*(?:number|no[.]))',
     'private_key': r'-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----',
     'credential_token': r'\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}|sk-(?:proj-)?[A-Za-z0-9_-]{24,}|AKIA[A-Z0-9]{16})\b',
     'credential_assignment': r"""(?i)\b(?:api_key|password|access_token|client_secret)\s*[:=]\s*["'][^"'\s]{8,}["']""",

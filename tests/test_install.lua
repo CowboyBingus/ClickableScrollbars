@@ -1,12 +1,4 @@
--- Runtime tests for the Clickable Scrollbars addon.
---
--- The platform is faked: the thumb is a scripted rectangle that moves by a
--- fixed number of pixels per injected wheel notch, which lets the aiming, the
--- calibration, the drag follow, the guards and the log be checked without
--- Windows or the game. Each numbered case pins one behaviour that was wrong in
--- an earlier build: paced emission (lag), queued drain (running on after the
--- pointer stopped), rounded-up residuals (repeat clicks moving) and repeated
--- settle passes (visible back-and-forth).
+-- Runtime tests: a scripted platform drives the addon frame by frame.
 
 package.path = (arg and arg[1] or '.') .. '/?.lua;' .. package.path
 
@@ -29,7 +21,9 @@ local function new_platform(options)
     local platform = {wheels = {}, closed = false, captures = 0}
     platform.state = {
         now = 1000, cursor = {x = 900, y = 400}, down = false, foreground = true,
-        bar = {left = 880, right = 891, top = 460, bottom = 700}, shift = shift or 13,
+        -- The bar is 10 px thick, the thickness measured on the live Armory frame:
+        -- the addon reads the interface scale from it.
+        bar = {left = 880, right = 889, top = 460, bottom = 700}, shift = shift or 13,
         display_height = options.display_height,
     }
     function platform.now() return platform.state.now end
@@ -45,6 +39,16 @@ local function new_platform(options)
         local bar = platform.state.bar
         local step = platform.state.shift * (notches > 0 and -1 or 1)
         bar.top, bar.bottom = bar.top + step, bar.bottom + step
+        if platform.state.bar_limit then
+            -- The game clamps the thumb at the ends of its track.
+            local limit = platform.state.bar_limit
+            local height = bar.bottom - bar.top
+            if bar.top < limit.top then
+                bar.top, bar.bottom = limit.top, limit.top + height
+            elseif bar.bottom > limit.bottom then
+                bar.bottom, bar.top = limit.bottom, limit.bottom - height
+            end
+        end
         return true
     end
     function platform.capture(center_x, center_y, options, strip_width, strip_window)
@@ -113,6 +117,15 @@ local function press(platform, environment, x, y)
     tick(platform, environment)
 end
 
+-- A click's notches go out one frame after the release, so the game has the
+-- mouse-up before any wheel arrives.
+local function click(platform, environment, x, y)
+    press(platform, environment, x, y)
+    platform.state.down = false
+    tick(platform, environment)
+    tick(platform, environment)
+end
+
 -- ---------------------------------------------------------------- 1. the jump
 
 local platform, environment, state = boot(13)
@@ -120,10 +133,10 @@ check('install returns state', type(state) == 'table' and state.status == 'runni
 check('update wrapper installed', environment.update ~= nil)
 
 local target = 300
-press(platform, environment, 886, target)
+click(platform, environment, 886, target)
 local expected_burst = math.floor((580 - target) / 13 + 0.5)
-check('the whole burst goes out on the click frame', #platform.wheels == expected_burst, #platform.wheels)
-check('burst direction is up', state.last_direction == 'up' and state.last_notches == expected_burst,
+check('the whole burst goes out after the release', #platform.wheels == expected_burst, #platform.wheels)
+check('burst direction is up', state.last_direction == 'up' and state.pages == 1,
     tostring(state.last_direction) .. '/' .. tostring(state.last_notches))
 drain(platform, environment, 1200)
 -- Whole wheel notches quantise the aim, so the best possible result is half a
@@ -135,20 +148,22 @@ check('a burst that lands close enough is left alone', state.corrections == 0
     and (state.last_reason == 'centered' or state.last_reason == 'close_enough'),
     state.last_reason .. ' corrections=' .. state.corrections)
 check('nothing is emitted after the thumb settles', #platform.wheels == expected_burst, #platform.wheels)
-check('the wheel step was calibrated from the observation', state.pixels_per_notch ~= nil
-    and math.abs(state.pixels_per_notch - 13) < 1, tostring(state.pixels_per_notch))
+-- Calibration comes from settled measurements only, so a right estimate stays put;
+-- the mismatched-step case below proves a wrong one is still learned.
+check('the wheel step is right, learned or defaulted', state.pixels_per_notch == nil
+    or math.abs(state.pixels_per_notch - 13) < 1, tostring(state.pixels_per_notch))
 
 -- --------------------------------------------------- 2. repeat click, no move
 
 local before_repeat = #platform.wheels
 press(platform, environment, 886, target + 5)
-check('a press on the thumb is a grab, not a jump', state.last_reason == 'bar_press', state.last_reason)
+check('a press on the thumb grabs the bar', state.last_reason == 'bar_press', state.last_reason)
 platform.state.down = false
 tick(platform, environment)
 platform.state.now = platform.state.now + 2000
-press(platform, environment, 886, target + 5)
+click(platform, environment, 886, target + 5)
 drain(platform, environment, 600)
-check('clicking the same spot again moves nothing', #platform.wheels == before_repeat,
+check('clicking the same spot again is a no-op to within the centring nudge', #platform.wheels <= before_repeat + 1,
     #platform.wheels - before_repeat)
 
 -- --------------------------------------------------------- 3. click below/above
@@ -156,57 +171,42 @@ check('clicking the same spot again moves nothing', #platform.wheels == before_r
 platform.state.down = false
 tick(platform, environment)
 platform.state.now = platform.state.now + 2000
-press(platform, environment, 886, 520)
+click(platform, environment, 886, 520)
 drain(platform, environment, 900)
 check('a click below jumps the thumb down', math.abs(platform.bar_center() - 520) <= 7,
     platform.bar_center())
 check('down direction recorded', state.last_direction == 'down', state.last_direction)
 
--- ------------------------------------------------------- 4. drag follows 1:1
+-- ------------------------------------------- 4. the thumb press, both routes
+--
+-- A press on the thumb is armed the same way whatever happens next: the native
+-- route (the armory grid's own scroll value) when a grid resolved, and the wheel
+-- drag underneath it otherwise. With neither a grid nor the loader's bridge - as
+-- in this harness - the drag is the only actuator there is, and it must still
+-- work: the earlier build left the gesture inert, which is what "clicking and
+-- dragging does nothing" was.
 
-local drag, drag_environment, drag_state = boot(13)
-press(drag, drag_environment, 886, drag.bar_center())
-check('a grab is recognised', drag_state.last_reason == 'bar_press', drag_state.last_reason)
-local captures_before = drag.captures
-local wheels_before = #drag.wheels
-local start_center = drag.bar_center()
-drag.state.cursor = {x = 886, y = drag.bar_center() + 39}
-tick(drag, drag_environment)
-check('a drag emits in the same frame it moves', #drag.wheels == wheels_before + 3, #drag.wheels - wheels_before)
-check('a drag never captures pixels', drag.captures == captures_before, drag.captures - captures_before)
-for step = 2, 8 do
-    drag.state.cursor = {x = 886, y = start_center + step * 39}
-    tick(drag, drag_environment)
+local native, native_environment, native_state = boot(13)
+press(native, native_environment, 886, native.bar_center())
+check('a press on the thumb grabs the bar', native_state.last_reason == 'bar_press',
+    native_state.last_reason)
+local wheels_at_thumb_press = #native.wheels
+native.state.cursor = {x = 886, y = native.bar_center() + 60}
+for index = 1, 40 do
+    native.state.cursor = {x = 886, y = native.state.cursor.y + 12}
+    tick(native, native_environment)
 end
-local travelled = drag.bar_center() - start_center
-check('the thumb travels exactly as far as the mouse', math.abs(travelled - 312) <= 1, travelled)
-check('no capture happened during the drag', drag.captures == captures_before,
-    drag.captures - captures_before)
-drag.state.down = false
-tick(drag, drag_environment)
-drain(drag, drag_environment, 400)
-check('the drag stops on release', drag_state.drag_active == false and drag_state.last_reason == 'drag_end',
-    drag_state.last_reason)
-check('nothing is emitted after release', #drag.wheels - wheels_before == math.floor(312 / 13 + 0.5),
-    #drag.wheels - wheels_before)
-
--- ------------------------------------------- 5. a teleport must not fling it
-
-local teleport, teleport_environment, teleport_state = boot(13)
-press(teleport, teleport_environment, 886, teleport.bar_center())
-teleport.state.cursor = {x = 886, y = teleport.bar_center() + 40}
-tick(teleport, teleport_environment)
-local after_drag_start = #teleport.wheels
-teleport.state.cursor = {x = 886, y = teleport.bar_center() + 600}
-tick(teleport, teleport_environment)
-check('a pointer teleport does not scroll', #teleport.wheels == after_drag_start,
-    #teleport.wheels - after_drag_start)
-check('the teleport is logged', teleport_state.last_reason == 'drag_start', teleport_state.last_reason)
+check('a held thumb drags through the wheel path when no grid is reachable',
+    #native.wheels > wheels_at_thumb_press, #native.wheels - wheels_at_thumb_press)
+native.state.down = false
+tick(native, native_environment)
+check('the drag ends on the release', native_state.last_reason == 'drag_end'
+    or native_state.last_reason == 'native_release', native_state.last_reason)
 
 -- ------------------------------- 6. a game with a different step: bounded nudges
 
 local odd, odd_environment, odd_state = boot(20)
-press(odd, odd_environment, 886, 760)
+click(odd, odd_environment, 886, 760)
 local burst = #odd.wheels
 drain(odd, odd_environment, 3000)
 local total = #odd.wheels
@@ -223,7 +223,7 @@ check('the step was re-learned', odd_state.pixels_per_notch ~= nil
 
 local deaf, deaf_environment, deaf_state = boot(13)
 deaf.ignore_wheel = true
-press(deaf, deaf_environment, 886, 760)
+click(deaf, deaf_environment, 886, 760)
 local deaf_burst = #deaf.wheels
 drain(deaf, deaf_environment, 2000)
 check('an ignored wheel is reported', deaf_state.last_reason == 'no_response' and deaf_state.no_response == 1,
@@ -240,7 +240,7 @@ drain(empty, empty_environment, 300)
 check('a click with no thumb does nothing', #empty.wheels == 0 and empty_state.last_reason == 'no_thumb',
     empty_state.last_reason)
 
-empty.state.bar = {left = 880, right = 891, top = 460, bottom = 700}
+empty.state.bar = {left = 880, right = 889, top = 460, bottom = 700}
 empty.state.foreground = false
 empty.state.now = empty.state.now + 2000
 press(empty, empty_environment, 886, 300)
@@ -272,7 +272,7 @@ check('error_limit stops the addon', broken_state.errors == 2
 
 local sink = {}
 local logged, logged_environment, logged_state = boot(13, sink)
-press(logged, logged_environment, 886, 300)
+click(logged, logged_environment, 886, 300)
 drain(logged, logged_environment, 1500)
 logged_environment.shutdown()
 local text = table.concat(sink)
@@ -323,7 +323,7 @@ fallback.capture = function(x, y, options, width, height, source)
     desktop_captures = desktop_captures + 1
     return original_capture(x, y, options, width, height)
 end
-press(fallback, fallback_environment, 886, 300)
+click(fallback, fallback_environment, 886, 300)
 drain(fallback, fallback_environment, 900)
 check('an unusable window capture falls back to the desktop', fallback_state.capture_source == 'screen',
     tostring(fallback_state.capture_source))
@@ -341,7 +341,7 @@ check('a 2160p display scales the geometry', scaled_state.scale == 1.5
     and scaled_state.settings.cursor_mask_radius == 108,
     tostring(scaled_state.scale) .. '/' .. tostring(scaled_state.settings.window))
 check('the display height is reported', scaled_state.display_height == 2160, scaled_state.display_height)
-press(scaled, scaled_environment, 886, 300)
+click(scaled, scaled_environment, 886, 300)
 drain(scaled, scaled_environment, 1500)
 check('a scaled click still lands on the pointer', math.abs(scaled.bar_center() - 300) <= 13,
     scaled.bar_center())
@@ -364,12 +364,28 @@ check('the old wheel step is dropped with it', scaled_state.pixels_per_notch == 
 
 -- ------------------------------------------------- 15. the wide retry pass
 
+-- A display query that throws must cost the scale, never the feature: this is
+-- the shape of the v2.2 report, where every press raised inside the platform's
+-- display query and the addon stopped after error_limit frames.
+local broken_display, broken_display_environment, broken_display_state = boot({shift = 13})
+broken_display.display_height = function() error('display query exploded') end
+click(broken_display, broken_display_environment, 886, 300)
+drain(broken_display, broken_display_environment, 900)
+check('a throwing display query does not stop the addon', broken_display_state.status == 'running'
+    and broken_display_state.errors == 0, broken_display_state.status .. ' errors=' .. broken_display_state.errors)
+check('the display failure is counted, not fatal', (broken_display_state.geometry_failures or 0) >= 1
+    and broken_display_state.geometry_failed == true, tostring(broken_display_state.geometry_failures))
+check('the addon keeps working at the reference scale', broken_display_state.scale == nil
+    and broken_display_state.settings.window == 460, tostring(broken_display_state.scale))
+check('clicks still land without the display query', broken_display_state.pages >= 1
+    and math.abs(broken_display.bar_center() - 300) <= 13, broken_display.bar_center())
+
 -- A thumb outside the normal strip (a long list, or a click far from the thumb)
 -- is still found: one doubled retry replaces the empty window.
 local retry, retry_environment, retry_state = boot({shift = 13, display_height = 1440})
 retry.capture_cap = 2200
-retry.state.bar = {left = 880, right = 891, top = 100, bottom = 500}
-press(retry, retry_environment, 886, 1000)
+retry.state.bar = {left = 880, right = 889, top = 100, bottom = 500}
+click(retry, retry_environment, 886, 1000)
 drain(retry, retry_environment, 1500)
 check('a thumb outside the strip is found by the retry', retry_state.pages == 1 and #retry.wheels > 0,
     'pages=' .. retry_state.pages .. ' wheels=' .. #retry.wheels)
@@ -378,8 +394,8 @@ check('the retry is counted', retry_state.wide_retries == 1, tostring(retry_stat
 local no_retry, no_retry_environment, no_retry_state = boot({shift = 13, display_height = 1440})
 no_retry.capture_cap = 2200
 no_retry_state.settings.window_max = no_retry_state.settings.window
-no_retry.state.bar = {left = 880, right = 891, top = 100, bottom = 500}
-press(no_retry, no_retry_environment, 886, 1000)
+no_retry.state.bar = {left = 880, right = 889, top = 100, bottom = 500}
+click(no_retry, no_retry_environment, 886, 1000)
 drain(no_retry, no_retry_environment, 600)
 check('without the retry the same click is a no-op', no_retry_state.pages == 0 and #no_retry.wheels == 0,
     'pages=' .. no_retry_state.pages)

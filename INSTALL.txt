@@ -1,74 +1,46 @@
-Clickable Scrollbars - v2.2
+Clickable Scrollbars - v2.6
 
-Lets you click a menu scrollbar track to move the thumb to the pointer, and
-drag the thumb to scroll with the mouse, instead of only being able to use the
-mouse wheel.
-
-Requires Bingus Shared Loader v15 or newer / API 1. This addon is discovered by
-the loader through its HD2-Addon declaration; managers do not install it
-automatically.
-
-Install only through HDArsenal or HD2MM. Do not copy patch files into the game
-directory by hand: the addon must be deployed by a manager so the load order and
-the game's own files stay under the manager's control.
-
-The addon ships no DLL, does not modify the game executable or any game file,
-writes no game memory and installs no system hooks. It reads the screen,
-polls the left mouse button and injects wheel events from inside the game.
-
-Geometry follows the display: the capture window, pointer box, accepted bar
-size, drag thresholds and wheel-step seed scale with the viewport height from a
-tested 1440p reference, so 1080p, 1440p and 4K screens keep the same relative
-behaviour. A resolution or monitor change is picked up on the next click. Values
-written in the ini are absolute device pixels.
+Mouse accessibility for Helldivers 2 menu scrollbars.
+Requires Bingus Shared Loader v15 or newer / API 1, installed separately.
 
 INSTALL
-
 1. Close Helldivers 2.
-
-2. Import Clickable-Scrollbars-v2.2.zip into Arsenal or HD2MM, replacing any
-   older Clickable Scrollbars entry. The v1 package shipped a UI resource
-   override that cannot reach the native Armory bars; remove it.
-
+2. Import Clickable-Scrollbars-v2.6.zip into Arsenal or HD2MM, replacing the
+   previous standalone Clickable Scrollbars entry.
 3. Enable it together with Bingus Shared Loader v15 or newer.
-
 4. With Arsenal's default priority, place the shared loader last, then
-   Purge / Deploy.
+   Purge / Deploy. Use one manager; do not copy patch files into the game folder.
+5. If an old diagnostic INI contains native=0, remove that line or set native=1.
+   INI: %LOCALAPPDATA%\ClickableScrollbars\ClickableScrollbars.ini
 
-5. Start the game, open the Armory and click the scrollbar track above or below
-   the thumb in any equipment list (Primary/Secondary/Throwable, Armor, Helmet,
-   Cape, Emote, Victory Pose, Player Card, Title or Career). The thumb moves so
-   its centre sits under the pointer, within half a wheel notch. Press the thumb
-   itself and it follows the mouse one-to-one.
+Do not enable a second copy of the addon (including a megapack copy) alongside
+this package. The separate VanillaPlusMegapack snapshot is not updated here.
 
-LOGS
+USING IT
+Grab the thumb to drag, or click the track to centre it there. A thumb click
+without movement leaves the list in place. Equipment and Career follow vertical
+pointer movement regardless of horizontal position after the thumb is grabbed.
+Both clamp at the track ends and use native scrolling without wheel input.
 
-%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ClickableScrollbars.log
+Other detected bars use wheel input and pause when the pointer leaves the
+scrollbar. That fallback has the game's wheel-step granularity. Focus loss or
+a changed native list cancels a hold. Release and grab again to start a new one.
 
-status=      running, disabled: config, or a stop reason
-pages=       track clicks that produced wheel input
-drags=       presses that turned into a drag
-corrections= settle nudges sent after a page
-no_response= a page the list did not answer (list end, or wheel ignored)
-misses=      clicks with no recognised thumb
-capture_source= window (cheap) or screen (desktop DC) - with capture_ms_avg
-scale=       geometry factor in use (1 at the tested 1440p reference)
-display_height= viewport height the factor came from
-wide_retries= clicks that needed the doubled capture window
-last_bar=    the thumb rectangle that was detected (screen pixels)
-last_moved=  thumb displacement measured after a page
-pixels_per_notch= median wheel step learned on this machine
-calibration= the observations that median is built from
-reason_counts= how often each decision was reached
-trace ...=   the last 48 decisions with millisecond stamps
+VALIDATION
+Offline tests pass, and v2.6 has been verified in-game.
+Windows API bindings and the interactive desktop-capture check pass.
+Supported build: Steam 24826606 / EXE 1.8.45317.0.
 
-Optional settings: %LOCALAPPDATA%\ClickableScrollbars\ClickableScrollbars.ini
-(see the README table). Set enabled=0 to disable without uninstalling.
+Log: %LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ClickableScrollbars.log
+Check the v2.6 header, native_writes, native_ok, native_fallbacks, errors and trace.
+Test slow drags, fast drags, both ends, returning from an end, crossing the tabs,
+release over a tab, and a fresh normal tab click after release.
+
+The addon is plaintext Lua. Native scrolling writes UI data and invokes the
+existing layout solver; it installs no system hooks or executable patches.
 
 UNINSTALL
-
-Disable the mod, purge the deployment, and redeploy the remaining mods. The
-addon touches no game file and writes no memory; the loader simply stops
-requiring it.
+Disable the mod, purge the deployment and redeploy the remaining mods. Restart
+the game to remove the addon from the running session.
 
 Developed with assistance from GPT-6 Astra.

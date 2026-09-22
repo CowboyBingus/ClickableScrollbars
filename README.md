@@ -1,113 +1,37 @@
-# Clickable Scrollbars
+# Clickable Scrollbars — v2.6
 
-Lets you drive the item-select menu scrollbars with the mouse instead of only
-being able to use the mouse wheel.
+Adds click-and-drag scrolling to Helldivers 2's native Armory lists for mouse accessibility. Requires **Bingus Shared Loader v15 or newer / API 1**.
 
-- **Click the track to jump there.** One click beside the bar sends the whole
-  move at once, so the thumb glides to the pointer instead of stepping towards
-  it. Its centre stops within half a wheel notch of the cursor, which is the
-  finest a whole wheel notch can aim.
-- **Press the bar to drag it.** Pressing the bar itself never jumps — it only
-  grabs the bar, and the thumb then moves by exactly the same distance as your
-  mouse, on the frame you move it. There is no queue and no schedule, so the
-  bar cannot lag behind the hand or keep moving after it stops.
-- **Nothing is re-aimed behind your back.** The verification pass after a click
-  runs only once the thumb has stopped moving, it keeps at most `max_corrections`
-  nudges per click, and each nudge must be smaller than the error it removes, so
-  a click cannot end in a visible back-and-forth.
-- The wheel, controller navigation and every other menu interaction stay as they
-  were.
-- **No files on disk beyond the log.** Diagnostic capture dumps are off by
-  default (`dump_captures=0`).
-- **Fits your display.** The capture window, pointer box, accepted bar size and
-  drag thresholds scale with the viewport height from a tested 1440p reference,
-  so 1080p, 1440p and 4K screens get the same relative geometry. A resolution or
-  monitor change is picked up on the next click.
-- **Covers the Armory lists.** Primary, Secondary, Throwable, Armor, Helmet,
-  Cape, Emote, Victory Pose, Player Card, Title and the Career stats list — the
-  lists whose bars the game draws in its native UI, where the shipped XAML
-  templates cannot reach (see the research document).
-- **Loader-based.** A Bingus Shared Loader addon: no DLL, no executable-memory
-  patch, no game-file override.
+## Behavior
 
-## Loader-only guarantees
+- Grabbing a thumb keeps the original grab point under the pointer. Clicking a thumb without moving leaves the list in place.
+- Equipment grids and Career use their own native scroll handlers. After grabbing the thumb, the drag follows vertical movement regardless of horizontal position and clamps at either end. Returning from an end uses the same original grab point. No wheel events are sent over tabs or items during these drags.
+- Clicking the track centres the thumb there and can continue into a drag.
+- Lost window focus, a changed menu/category or a failed native update cancels the gesture. Release and grab again after changing menus. A failed native owner is retired until a different owner is resolved.
+- Other detected bars use wheel input. This fallback is quantized by the game's wheel step and pauses outside the scrollbar's column and known vertical bounds. If the full track is unavailable, the observed thumb is the conservative vertical boundary. It cannot provide native pixel-smooth dragging on every menu.
+- Fallback track clicks wait until the game has had a frame to consume mouse-up. Queued clicks and corrections are dropped if the pointer or focus leaves their target. Drag notches are never queued for release.
 
-This addon is a plaintext Lua resource that the mod loader discovers through its
-`-- HD2-Addon:` declaration. It ships no DLL, does not patch or write game
-memory, installs no system hooks and never touches a game file. At runtime it
-only reads pixels (`BitBlt`), polls the left button (`GetAsyncKeyState`) and
-injects wheel events (`SendInput`) from inside the running game. The build
-refuses to package a script that mentions hook, DLL-loading or memory-mutation
-APIs, and the package test asserts the shipped payload is free of them.
-
-Install it through HDArsenal or HD2MM, never by copying files into the game
-directory yourself: managers own the deployment and the load order.
-
-## How it works
-
-The game's Armory scrollbars are native widgets: a uniform grey thumb, 9–14 px
-wide, with the track invisible and inert. The addon watches the left mouse
-button, captures a narrow strip of the rendered frame around the cursor, and
-recognises that thumb:
-
-1. Vertical runs of neutral grey pixels (brightness window, channel spread and
-   uniformity checks) are merged into candidate thumbs. The pointer is drawn as
-   a coloured sprite about 100 px across with a bright core and a mild neutral
-   halo; inside its box a pixel that is coloured or too bright to judge is
-   treated as hidden and bridged, while a pixel that still reads as dark panel
-   ends the run. A bar under the pointer therefore keeps its real extent
-   instead of being eaten by the mask.
-2. A candidate whose column holds the cursor is kept only when the background
-   beside it is clearly darker (edges) and the click pixel itself is dark (the
-   invisible track, not list content).
-3. A track click sends the whole distance at once (up to `jump_max_notches`).
-   The verification pass then runs only when the thumb has stopped, and only
-   when a whole notch is predicted to reduce the remaining error; if the game
-   did not move at all for a multi-notch burst, the list is at its end (or the
-   wheel was ignored) and the pass stops instead of nudging again.
-4. A drag converts mouse movement into wheel notches one-to-one using the
-   learned wheel step, and sends them on the frame that produced them.
-5. The wheel step is the median of the displacements the game actually
-   produced, learned only from settled measurements, so both the jump and the
-   drag mapping get more accurate as you use them.
-6. Thumb ends hidden by the pointer sprite are reconstructed from the tracked
-   thumb height, so a press on or beside a partly hidden bar is still classified
-   correctly rather than read as list content.
-7. Cost is bounded: nothing is captured while a drag is in progress, the first
-   click in a menu scans a wide strip and later clicks re-check only the known
-   bar column (40 px wide), and the capture itself prefers the game's own window
-   device context — measured at 0.2 ms against 9 ms for the desktop device
-   context at 3440×1440 — falling back to the desktop context (and logging the
-   choice) when a window copy comes back black or clipped.
-
-8. Geometry is relative to the display: the pixel constants were measured on a
-   1440 px tall viewport and are multiplied by `display_height / 1440`, so a
-   2160p screen gets a 690 px capture window, a ±108 pointer box and a 42 px
-   bar-width limit. If a thumb still does not fit in the strip, one doubled
-   retry finds it rather than losing the click. Numbers written in the ini are
-   absolute device pixels and are never scaled.
-
-Every decision is written to
-`%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ClickableScrollbars.log`: the
-settings in force, counters, timing health (`capture_ms_avg`, `frame_ms_avg`,
-`capture_source`), the tracked thumb, the calibration samples, a tally of every
-decision reason and the last 48 decisions with millisecond stamps. The log is
-rewritten in place and rate limited, so it is the only file the addon touches.
-
-Background: [why the shipped scrollbar templates cannot reach these bars, and
-what the input-level design does instead](docs/RESEARCH.md) ·
-[what has been verified](docs/VALIDATION.md).
+The addon does not move or lock the system pointer. It does not install hooks or patch executable code. Native scrolling uses the game's existing scrollbar, container-position and layout routines; every called entry point must match the supported build.
 
 ## Install
 
-Close the game, import `Clickable-Scrollbars-v2.2.zip` into HDArsenal or HD2MM
-alongside **Bingus Shared Loader v15 or newer**, enable both, then purge and
-redeploy. The loader discovers the addon through its `-- HD2-Addon:`
-declaration. See [INSTALL.txt](INSTALL.txt).
+Close the game, import **Clickable-Scrollbars-v2.6.zip** into Arsenal or HD2MM, and replace the previous standalone Clickable Scrollbars package. Enable it with Bingus Shared Loader v15+. With Arsenal's default priority, put the loader last, then Purge / Deploy. Use one manager.
 
-## Tuning
+If an earlier diagnostic configuration contains `native=0`, remove that override or set `native=1` to use the corrected native path. Do not enable another package containing the same addon alongside this standalone package.
 
-Optional `%LOCALAPPDATA%\ClickableScrollbars\ClickableScrollbars.ini`:
+Vanilla Plus Megapack v16 and its Rows variant include this same v2.6 implementation. The bundled version is pinned independently.
+
+## What changed
+
+Career uses a separate scrolling container. The old route could mistake its visible scrollbar for the hidden equipment grid, retire native scrolling, then fall back to the wheel path that pauses outside the track. v2.6 selects the visible owner and gives Career its own direct scroll path.
+
+Equipment updates now cancel an existing scroll animation, call the native thumb setter, and lay out the list. A raw value write skipped the thumb setter's work. Both routes read actual widget transforms and thumb sizes instead of estimating track bounds from a screenshot.
+
+Controller identity uses its numeric address; the game's placeholder text for FFI pointers cannot collapse different owners into one. Regression tests cover large horizontal excursions, both vertical ends, release and menu changes for both routes.
+
+## Settings
+
+Optional file: `%LOCALAPPDATA%\ClickableScrollbars\ClickableScrollbars.ini`. Defaults work without this file. Pixel settings written explicitly remain absolute device pixels. Detection geometry starts from viewport height and adjusts using the measured bar thickness.
 
 | Key | Default | Meaning |
 |---|---:|---|
@@ -125,51 +49,48 @@ Optional `%LOCALAPPDATA%\ClickableScrollbars\ClickableScrollbars.ini`:
 | `min_height` / `min_width` / `max_width` | 44 / 6 / 28 | accepted thumb size |
 | `min_luma` / `max_luma` / `max_spread` | 105 / 220 / 18 | accepted thumb colour |
 | `edge_contrast` | 25 | how much darker the track beside a thumb must be |
-| `default_pixels_per_notch` / `calibration_samples` | 13 / 7 | starting wheel step and how many observations the median uses |
+| `default_pixels_per_notch` / `bar_reference_width` | 13 / 10 | measured wheel step and bar thickness at the reference scale |
+| `calibration_samples` | 7 | how many settled observations the median uses |
 | `cooldown_ms` | 0 | shortest gap between two track-click jumps |
-| `drag_threshold` | 10 | px of vertical movement that starts a drag |
+| `drag_threshold` | 10 | px of vertical movement that starts a wheel-fallback drag |
 | `drag_max_step_px` / `drag_max_notches` | 220 / 40 | per-frame guards against a pointer teleport |
+| `drag_column_margin` | 2.8 | legacy setting, ignored; wheel dragging stays inside the scrollbar |
+| `drag_verify_notches` / `drag_verify_ms` | 3 / 45 | how often a drag re-anchors and checks for a stall |
+| `drag_stall_confirmations` | 2 | readings in a row that must show no thumb movement |
+| `track_clamp_max_notches` | 12 | notches a learned list end may block before the hint is dropped |
+| `native` | 1 | 0 disables direct equipment/Career scrolling and uses the restricted wheel fallback |
+| `native_verify_ms` | 200 | how long after a gesture's first write the game's read-back is checked |
 | `use_window_capture` | 1 | try the game's own window device context before the desktop one |
+| `burst_cache_ms` | 250 | how long a recent measurement may classify a press |
+| `burst_capture_every` | 3 | real captures forced after this many answered presses |
+| `capture_budget_ms_per_s` | 60 | capture time the addon may spend per second |
+| `capture_budget_floor_ms_per_s` | 30 | floor for that budget when frames are slow |
+| `probe_step` | 8 | rows between column probes (1 scans every row) |
+| `emit_max_notches` | 16 | notches one frame may inject; only track clicks may continue on later frames |
 | `log_interval_ms` / `trace_lines` / `trace_events` | 1000 / 48 / 0 | log rate limit, retained decisions, per-emission tracing |
 | `error_limit` | 8 | frame errors tolerated before the addon stops |
 | `dump_captures` | 0 | write that many capture BMPs next to the log (diagnosis only) |
 
-## Status
+## Validation and limitations
 
-Offline verification: 49 detector tests, 58 runtime tests, 13 platform tests
-and the package check pass. The detector replay against the captured live
-frames is exact rather than lenient: clicking the Armory thumb is a grab with
-the pointer sprite over it, clicking the Career thumb is a grab, and clicking
-above and below either bar is a track press whose pixel is the dark panel
-(private evidence under `artifacts/ui-research/strips`). The animated harness
-(`artifacts/ui-research/debug_runtime.lua`) measures the behaviour against a
-game model whose list eases towards its target: a matched click lands 2 px from
-the pointer with no nudge, a game with a 1.7× larger wheel step is corrected by
-a single nudge to 4 px, an ignored wheel is reported instead of chased, and a
-drag moves the target exactly with the pointer (the residual on screen is the
-game's own easing, not an input queue).
+v2.6 passed offline regression tests and user verification in-game on Steam build **24826606**, EXE **1.8.45317.0**. The release contains the exact runtime source that received that confirmation.
 
-**In-game validation is pending** — deploy, then click above and below a thumb
-in Armory → Career and in an equipment grid, drag a thumb, and read the log:
-`capture_source` and `capture_ms_avg` show which capture path is in use and what
-it costs, `pages` / `drags` / `corrections` / `no_response` count what happened,
-and the `trace` lines explain each decision.
+See [validation](docs/VALIDATION.md) for checks and the in-game regression checklist. A passed simulator proves interaction logic against its model, not the game's native ABI. The Windows binding and desktop-capture test passed.
+
+Logs: `%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ClickableScrollbars.log`. Look for `v2.6`, `native_writes`, `native_ok`, `native_fallbacks`, `errors`, and the final gesture trace. The native owner key ends in `grid` or `career`. Diagnostic image dumps default to off.
 
 ## Build
 
 ```powershell
-python -B ClickableScrollbars/scripts/build.py
+python -B scripts/build.py
 ```
 
-The build validates the `-- HD2-Addon:` declaration, compiles the source with
-the same LuaJIT the other mods use, runs both Lua suites and the package check,
-rebuilds `data/9ba626afa44a3aa3.patch_0`, re-reads it with the repository's
-patch inspector, then writes `releases/Clickable-Scrollbars-v2.2.zip`.
+For an environment without an interactive Windows desktop:
 
-Run `python scripts/privacy_audit.py --zip releases/Clickable-Scrollbars-v2.2.zip` to
-re-check the published source inventory and the packaged archive.
+```powershell
+python -B scripts/build.py --skip-desktop-capture
+```
 
-AI-assisted development with GPT-6 Astra.
+The second command records `desktop_capture_verified=false`; it still runs the detector, runtime, native-model, platform-binding, performance, profiler, simulator, compilation, archive and package checks. Output: `releases/Clickable-Scrollbars-v2.6.zip`.
 
-Helldivers 2 and its assets belong to their respective owners. This is an
-unofficial mod project.
+AI-assisted development with GPT-6 Astra. Helldivers 2 and its assets belong to their respective owners; this is an unofficial mod.
