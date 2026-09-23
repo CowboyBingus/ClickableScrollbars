@@ -29,7 +29,7 @@ _spec.loader.exec_module(_package)
 package_release = _package.package_release
 
 MODULE = 'mods/cowboybingus/clickable_scrollbars'
-REVISION = 'v2.10'
+REVISION = 'v2.13'
 # In-game confirmation applies only to these exact runtime bytes.
 VERIFIED_SOURCE_SHA256 = 'FEF9C8287C6E17DB5004EFCA4FA57372C3E663C4A622D3035895DD3D8E0268ED'
 DECLARATION = '-- HD2-Addon: ' + MODULE + '\n'
@@ -85,13 +85,14 @@ def main():
     source = read_source()
     tests = ''
     for name in ('test_detector.lua', 'test_install.lua', 'test_native.lua', 'test_platform.lua',
-                 'test_performance.lua', 'test_profile.lua', 'test_ui_sim.lua'):
+                 'test_performance.lua', 'test_profile.lua', 'test_ui_sim.lua', 'test_settings_input.lua'):
         test_path = ROOT / 'tests' / name
         arguments = [test_path, WORKSPACE, SOURCE]
         if name == 'test_platform.lua' and options.skip_desktop_capture:
             arguments.append('--skip-capture')
         output, env = lua(arguments)
         tests += output
+    tests += run([LUA, ROOT / 'tests/test_current_ui.lua', ROOT])
     compile_check, env = lua(['-e', 'local f, e = loadfile([[' + str(SOURCE) + ']]); '
                               'assert(f, e); print("source compiles")'])
     tests += compile_check
@@ -127,18 +128,21 @@ def main():
         'guid': 'b13f1fdd-9b30-474d-a86b-b8e30511a19f',
         'module': MODULE, 'declaration': DECLARATION.strip(),
         'description': 'Click a menu scrollbar track to move the thumb there, and drag the '
-                       'thumb to scroll with the pointer. The armory list\'s own scroll model '
-                       'is driven directly. Inactive menus perform no capture or injected input. Requires Bingus '
+                       'thumb to scroll with the pointer. Armory and mission loadout lists use '
+                       'their own native scroll models. Inactive menus perform no capture or injected input. Requires Bingus '
                        'Shared Loader v15 or newer / API 1.',
         'requires': [{'name': 'Bingus Shared Loader', 'api': 1, 'revision': 'loader-v15'}],
         'mechanism': {
             'input': 'left-button press, cursor position',
-            'detection': 'the Armory controller is resolved from dispatch kind 224; '
-                         'resolved visibility selects equipment or Career. Native widget '
-                         'transforms provide the track bounds and thumb size',
+            'detection': 'the Armory controller is dispatch kind 224 and the mission '
+                         'loadout controller is kind 229; state 14 uses its grid at '
+                         'controller+864032. Resolved visibility selects the active owner. '
+                         'Native widget transforms provide track bounds and thumb size',
             'output': 'a held gesture owns its visible scrollbar regardless of horizontal '
                       'pointer position. Equipment uses animation cancellation, the scrollbar '
                       'setter and grid layout; Career uses the container position setter. '
+                      'Settings consume the native UI selection through mouse-up so rows and tabs '
+                      'cannot activate during an owned drag. '
                       'Neither route emits wheel or button input; unsupported or hidden menus are inert',
             'runtime_screen_capture': False, 'diagnostics_default': False,
             'follow_up': 'owner and layout are revalidated while held; the game-derived '

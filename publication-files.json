@@ -18,7 +18,10 @@
   "scripts/package.py",
   "scripts/privacy_audit.py",
   "src/clickable_scrollbars.lua",
+  "tests/captured_ui.lua",
+  "tests/fixtures/ui_armory_25327279.lua",
   "tests/runtime_fixture.lua",
+  "tests/test_current_ui.lua",
   "tests/test_detector.lua",
   "tests/test_install.lua",
   "tests/test_native.lua",
@@ -26,5 +29,6 @@
   "tests/test_performance.lua",
   "tests/test_platform.lua",
   "tests/test_profile.lua",
+  "tests/test_settings_input.lua",
   "tests/test_ui_sim.lua"
 ]

@@ -1,4 +1,27 @@
-# v2.8 validation
+# v2.13 Display scrollbar validation
+
+`test_settings_input.lua` reproduces the old source activating Display options
+after its native timer advances. The fixed source passes thumb and track drags
+across options and tabs, stationary holds, frame intervals from 4 to 600 ms,
+release over a tab, focus loss/recovery, owner/layout changes and write failures.
+Fresh tab and option clicks work after release. Equipment, Career and bindings
+gestures retain their existing behavior. Native-layer checks verify the input
+singleton, selection action and refusal paths.
+
+The regression fails against the saved pre-fix source. These are offline checks;
+the new package still needs in-game confirmation. In Display settings, drag the
+thumb and track across options and tabs while holding left click, release over
+a tab, then click that tab again. Only the fresh click should activate it.
+
+## Earlier v2.11 validation status
+
+The existing offline interaction checks cover the Armory grid and Career list.
+The v2.11 loadout route adds dispatch kind 229 and grid offset 864032 from the
+captured build 25327279 UI. This new path has not been regression-tested or
+verified in-game; verify thumb/track clicks, continuous drags, screen changes
+and a fresh ordinary click after release before treating it as confirmed.
+
+## Earlier v2.8 checks
 
 The regression harness reproduces the released bug: ordinary clicks without a visible native owner entered the pixel detector. The old v2.6 source fails the new no-capture contract.
 

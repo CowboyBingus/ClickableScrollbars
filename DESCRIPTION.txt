@@ -1,1 +1,1 @@
-Smooth native dragging for equipment and Career scrollbars, including sideways pointer movement. No screenshot fallback or routine click logging. Requires Bingus Shared Loader v15+. v2.8 awaits in-game verification.
+Smooth native dragging for Armory equipment, mission loadout, Career and Options bindings scrollbars. No screenshot fallback or routine click logging. Requires Bingus Shared Loader v16+. v2.13 options interaction awaits in-game verification.

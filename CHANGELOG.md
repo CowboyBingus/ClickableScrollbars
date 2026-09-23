@@ -1,7 +1,29 @@
-# v2.10
+# v2.13
 
-- Update compatibility for game build 25327279.
-- Restore scrollbar track clicks and dragging on updated equipment lists.
+- Fix Display settings scrollbar drags activating options and tabs while the
+  left mouse button is held. Consume the native UI selection for the gesture
+  instead of changing the settings list's timer.
+- Keep the captured click suppressed through cancellation and release; a fresh
+  click works normally. The pointer remains free to move horizontally.
+- Add regressions for the native timer update, separate row/tab input readers,
+  thumb and track drags, focus loss, failed writes and ordinary clicks afterward.
+- Offline verification passes; in-game confirmation remains pending.
+
+# v2.12
+
+- Add click and drag support for the Mouse & Keyboard and Controller bindings
+  lists in Options, using their own native scrollbar and active screen guard.
+- Validate the options list against a live before/after scroll capture and add
+  regression checks for inactive and hidden bindings pages.
+- In-game confirmation of the new options route remains pending.
+
+# v2.11
+
+- Resolve the mission loadout controller (kind 229) and its equipment grid at
+  controller offset 864032 on build 25327279.
+- Use the live UI screen stack to select loadout when both supported owners are
+  registered, and include controller kind in gesture ownership.
+- Loadout interaction still needs offline regression and in-game confirmation.
 
 # v2.8
 

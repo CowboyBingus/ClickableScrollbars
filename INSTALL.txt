@@ -1,16 +1,57 @@
-Clickable Scrollbars v2.10
+The UI repair supports the captured Armory and mission loadout controllers for build 25327279. The loadout controller is kind 229 and embeds its 48-item grid at offset 864032. In-game loadout interaction still needs confirmation.
 
-Supports Helldivers 2 Steam build 25327279 / game 1.8.45850.0.
-Requires Bingus Shared Loader v16 or newer / API 1.
+Current compatibility candidate: Clickable Scrollbars v2.13, Steam build 25327279 / EXE 1.8.45850.0. Use Bingus Shared Loader v16. The Display scrollbar input fix passes offline checks; installed interaction still needs confirmation.
 
-1. Close Helldivers 2 and use one mod manager.
-2. Replace the previous package with Clickable-Scrollbars-v2.10.zip.
-3. Enable this package and Bingus Shared Loader.
-4. With Arsenal's default priority, put the loader last (at the bottom).
-   With first-mod priority enabled, put the loader first.
-5. Purge / Deploy, then start the game normally.
+Clickable Scrollbars - v2.13
 
-To remove or change options, close the game, disable the package, and
-Purge / Deploy again. Keep the loader enabled while other mods need it.
+Mouse accessibility for Helldivers 2 menu scrollbars.
+Requires Bingus Shared Loader v16 or newer / API 1, installed separately.
 
-Logs: %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs
+INSTALL
+1. Close Helldivers 2.
+2. Import Clickable-Scrollbars-v2.13.zip into Arsenal or HD2MM, replacing the
+   previous standalone Clickable Scrollbars entry.
+3. Enable it together with Bingus Shared Loader v16 or newer.
+4. With Arsenal's default priority, place the shared loader last, then
+   Purge / Deploy. Use one manager; do not copy patch files into the game folder.
+5. If an old diagnostic INI contains native=0, remove that line or set native=1.
+   INI: %LOCALAPPDATA%\ClickableScrollbars\ClickableScrollbars.ini
+
+Do not enable a second copy of the addon (including a megapack copy) alongside
+this package.
+
+USING IT
+Grab the thumb to drag, or click the track to centre it there. A thumb click
+without movement leaves the list in place. Equipment and Career follow vertical
+pointer movement regardless of horizontal position after the thumb is grabbed.
+Both clamp at the track ends and use native scrolling without wheel input.
+Display settings drags consume the held selection so options and tabs do not
+activate under the pointer. Release, then click normally to activate a control.
+
+Unsupported or hidden menus are left alone, with no screenshot or wheel fallback.
+Focus loss or a changed native list cancels a hold. Release and grab again to
+start a new one.
+
+VALIDATION
+Existing offline checks cover Armory and Career. The new loadout path needs offline regression and in-game confirmation.
+The Display input regression, Windows API bindings and package checks pass.
+In-game interaction and interactive desktop capture remain unverified for v2.13.
+Supported build: Steam 25327279 / EXE 1.8.45850.0.
+
+Log: %LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ClickableScrollbars.log
+Set diagnostics=1 to collect native_writes, native_ok, errors and gesture traces.
+Test slow drags, fast drags, both ends, returning from an end, crossing the tabs,
+release over a tab, and a fresh normal tab click after release.
+
+The addon is plaintext Lua. Native scrolling writes UI data and invokes the
+existing layout solver; it installs no system hooks or executable patches.
+
+UNINSTALL
+Disable the mod, purge the deployment and redeploy the remaining mods. Restart
+the game to remove the addon from the running session.
+
+Developed with assistance from GPT-6 Astra.
+
+Ordinary gameplay clicks no longer capture pixels or write routine logs.
+Only native equipment and Career scrolling is supported; no screenshot/wheel fallback.
+Set diagnostics=1 in the optional INI only when collecting interaction traces.

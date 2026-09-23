@@ -1,9 +1,10 @@
-The UI repair updates controller registration for build 25327279. A live read-only Armory capture resolves the 55-item grid and scrollbar geometry. Offline interaction tests pass; clicking and dragging the installed repair still need in-game confirmation.
+The UI repair supports the captured Armory and mission loadout controllers for build 25327279. The loadout controller is kind 229 and embeds its 48-item grid at offset 864032. In-game loadout interaction still needs confirmation.
 
+> Current compatibility candidate: Clickable Scrollbars v2.13, Steam build 25327279 / EXE 1.8.45850.0. Use Bingus Shared Loader v16. The Display scrollbar input fix passes offline checks; installed interaction still needs confirmation.
 
-# Clickable Scrollbars — v2.10
+# Clickable Scrollbars — v2.13
 
-Adds smooth click-and-drag scrolling to Helldivers 2 equipment and Career menus.
+Adds smooth click-and-drag scrolling to Helldivers 2 Armory equipment, mission loadout, Career, Display settings and Options bindings menus.
 Requires Bingus Shared Loader v16 or newer / API 1.
 
 - Grab the thumb and move vertically anywhere horizontally. The original grab point stays fixed.
@@ -14,9 +15,9 @@ Requires Bingus Shared Loader v16 or newer / API 1.
 
 ## Install
 
-Close the game, replace the previous standalone package with `Clickable-Scrollbars-v2.10.zip` in Arsenal or HD2MM, enable it with Bingus Shared Loader v16+, then Purge / Deploy. With Arsenal's default priority, put the loader last. Use one mod manager and one copy of this addon.
+Close the game, replace the previous standalone package with `Clickable-Scrollbars-v2.13.zip` in Arsenal or HD2MM, enable it with Bingus Shared Loader v16+, then Purge / Deploy. With Arsenal's default priority, put the loader last. Use one mod manager and one copy of this addon.
 
-Vanilla Plus Megapack v26 and its Rows variant include this version.
+Vanilla Plus Megapack v26 still pins v2.10; use this standalone update for the loadout fix.
 
 ## Settings
 
@@ -35,7 +36,7 @@ Legacy pixel-detector settings no longer affect runtime interaction. An old `nat
 
 ## Validation
 
-Supported game: Steam build 25327279 / EXE 1.8.45850.0. Offline tests cover native interaction, hidden owners, gameplay clicks, callback preservation, bounded work and archive integrity. v2.6 received user confirmation in-game; the changed v2.10 source still needs in-game confirmation. See [validation](docs/VALIDATION.md).
+Supported game: Steam build 25327279 / EXE 1.8.45850.0. Existing offline checks cover Armory and Career. The new loadout path needs offline regression and in-game confirmation. See [validation](docs/VALIDATION.md).
 
 Diagnostic output, when enabled, goes to `%LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs/ClickableScrollbars.log`. Startup, shutdown and actual errors can still write a log. Private logs and machine details are excluded from releases.
 
@@ -43,6 +44,4 @@ Run `python -B scripts/build.py` to build. See [build instructions](CONTRIBUTING
 
 AI-assisted development with GPT-6 Astra. This is an unofficial mod.
 
-See [validation coverage](docs/MIGRATION_VALIDATION.md) for the scope of the release checks.
-
-Current version: **v2.10**, for game build **25327279**. See [changes](CHANGELOG.md) and [validation coverage](docs/MIGRATION_VALIDATION.md).
+Release **v2.13** fixes Display scrollbar drags activating options and tabs while left click is held. Offline regression checks pass; in-game confirmation remains pending.
