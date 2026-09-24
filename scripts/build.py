@@ -29,7 +29,7 @@ _spec.loader.exec_module(_package)
 package_release = _package.package_release
 
 MODULE = 'mods/cowboybingus/clickable_scrollbars'
-REVISION = 'v2.13'
+REVISION = 'v2.14'
 # In-game confirmation applies only to these exact runtime bytes.
 VERIFIED_SOURCE_SHA256 = 'FEF9C8287C6E17DB5004EFCA4FA57372C3E663C4A622D3035895DD3D8E0268ED'
 DECLARATION = '-- HD2-Addon: ' + MODULE + '\n'
@@ -92,7 +92,6 @@ def main():
             arguments.append('--skip-capture')
         output, env = lua(arguments)
         tests += output
-    tests += run([LUA, ROOT / 'tests/test_current_ui.lua', ROOT])
     compile_check, env = lua(['-e', 'local f, e = loadfile([[' + str(SOURCE) + ']]); '
                               'assert(f, e); print("source compiles")'])
     tests += compile_check

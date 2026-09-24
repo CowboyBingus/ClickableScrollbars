@@ -1,17 +1,17 @@
-The UI repair supports the captured Armory and mission loadout controllers for build 25327279. The loadout controller is kind 229 and embeds its 48-item grid at offset 864032. In-game loadout interaction still needs confirmation.
+Current local compatibility candidate for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed; live gameplay verification is pending.
 
-Current compatibility candidate: Clickable Scrollbars v2.13, Steam build 25327279 / EXE 1.8.45850.0. Use Bingus Shared Loader v16. The Display scrollbar input fix passes offline checks; installed interaction still needs confirmation.
+The UI repair supports the captured Armory and mission loadout controllers for build 25480438. The loadout controller is kind 229 and embeds its 48-item grid at offset 864032. In-game loadout interaction still needs confirmation.
 
-Clickable Scrollbars - v2.13
+Clickable Scrollbars - v2.14
 
 Mouse accessibility for Helldivers 2 menu scrollbars.
-Requires Bingus Shared Loader v16 or newer / API 1, installed separately.
+Requires Bingus Shared Loader v17 or newer / API 1, installed separately.
 
 INSTALL
 1. Close Helldivers 2.
-2. Import Clickable-Scrollbars-v2.13.zip into Arsenal or HD2MM, replacing the
+2. Import Clickable-Scrollbars-v2.14.zip into Arsenal or HD2MM, replacing the
    previous standalone Clickable Scrollbars entry.
-3. Enable it together with Bingus Shared Loader v16 or newer.
+3. Enable it together with Bingus Shared Loader v17 or newer.
 4. With Arsenal's default priority, place the shared loader last, then
    Purge / Deploy. Use one manager; do not copy patch files into the game folder.
 5. If an old diagnostic INI contains native=0, remove that line or set native=1.
@@ -35,8 +35,8 @@ start a new one.
 VALIDATION
 Existing offline checks cover Armory and Career. The new loadout path needs offline regression and in-game confirmation.
 The Display input regression, Windows API bindings and package checks pass.
-In-game interaction and interactive desktop capture remain unverified for v2.13.
-Supported build: Steam 25327279 / EXE 1.8.45850.0.
+In-game interaction and interactive desktop capture remain unverified for v2.14.
+Supported build: Steam 25480438 / EXE 1.8.46015.0.
 
 Log: %LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ClickableScrollbars.log
 Set diagnostics=1 to collect native_writes, native_ok, errors and gesture traces.

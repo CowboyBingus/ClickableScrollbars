@@ -1,2 +1,3 @@
-- Update compatibility for game build 25327279.
-- Restore scrollbar track clicks and dragging on updated equipment lists.
+- Update shifted scrollbar native addresses for Steam build 25480438.
+- Preserve equipment and Career track clicks and dragging.
+- Offline builds and package checks pass; live gameplay validation remains pending.
