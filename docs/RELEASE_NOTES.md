@@ -1,3 +1,3 @@
-- Update shifted scrollbar native addresses for Steam build 25480438.
-- Preserve equipment and Career track clicks and dragging.
-- Offline builds and package checks pass; live gameplay validation remains pending.
+- Documentation-only release: the addon is identical to v2.14 (same packaged addon).
+- Rewrites the install notes packaged with the addon and the README status: one current status line instead of the compatibility-candidate notes left from the game-build update. Scrollbar dragging works in live play.
+- Lists one loader requirement, Bingus Shared Loader v18, and notes that Vanilla Plus Megapack v32 already contains the same addon.

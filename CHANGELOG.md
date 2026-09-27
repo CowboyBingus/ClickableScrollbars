@@ -1,3 +1,9 @@
+# v2.14.1
+
+- Documentation-only release: the addon is identical to v2.14 (same packaged addon).
+- Rewrites the install notes packaged with the addon and the README status: one current status line instead of the compatibility-candidate notes left from the game-build update. Scrollbar dragging works in live play.
+- Lists one loader requirement, Bingus Shared Loader v18, and notes that Vanilla Plus Megapack v32 already contains the same addon.
+
 # v2.14
 
 - Update shifted scrollbar native addresses for Steam build 25480438.

@@ -30,6 +30,7 @@ package_release = _package.package_release
 
 MODULE = 'mods/cowboybingus/clickable_scrollbars'
 REVISION = 'v2.14'
+VERSION = 'v2.14.1'  # package version; the module revision is unchanged
 # In-game confirmation applies only to these exact runtime bytes.
 VERIFIED_SOURCE_SHA256 = 'FEF9C8287C6E17DB5004EFCA4FA57372C3E663C4A622D3035895DD3D8E0268ED'
 DECLARATION = '-- HD2-Addon: ' + MODULE + '\n'
@@ -123,13 +124,13 @@ def main():
     files = {f'data/{ARCHIVE}{suffix}': f'build/{ARCHIVE}{suffix}'
              for suffix in ('', '.stream', '.gpu_resources')}
     report = {
-        'name': 'Clickable Scrollbars', 'slug': 'ClickableScrollbars', 'revision': REVISION,
+        'name': 'Clickable Scrollbars', 'slug': 'ClickableScrollbars', 'revision': REVISION, 'version': VERSION,
         'guid': 'b13f1fdd-9b30-474d-a86b-b8e30511a19f',
         'module': MODULE, 'declaration': DECLARATION.strip(),
         'description': 'Click a menu scrollbar track to move the thumb there, and drag the '
                        'thumb to scroll with the pointer. Armory and mission loadout lists use '
                        'their own native scroll models. Inactive menus perform no capture or injected input. Requires Bingus '
-                       'Shared Loader v15 or newer / API 1.',
+                       'Shared Loader v18 / API 1.',
         'requires': [{'name': 'Bingus Shared Loader', 'api': 1, 'revision': 'loader-v15'}],
         'mechanism': {
             'input': 'left-button press, cursor position',

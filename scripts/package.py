@@ -22,7 +22,7 @@ def package_release(root: Path, build: Path, report: dict) -> Path:
             raise ValueError('Build output changed before packaging: ' + source)
         files[destination] = data
     slug = report['slug']
-    release_version = report['revision']
+    release_version = report.get('version') or report['revision']
     display_name = report['name'] + ' - ' + release_version
     release_stem = report['name'].replace(' ', '-') + '-' + release_version
     files[slug + '-README.txt'] = (root / 'INSTALL.txt').read_bytes()
