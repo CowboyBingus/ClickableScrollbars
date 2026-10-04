@@ -1,21 +1,21 @@
-> Release **v2.14.1** for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed; scrollbar dragging works in live play.
+> Release **v2.15** for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed; scrollbar dragging works in live play.
 
-# Clickable Scrollbars — v2.14.1
+# Clickable Scrollbars — v2.15
 
 Adds smooth click-and-drag scrolling to Helldivers 2 Armory equipment, mission loadout, Career, Display settings and Options bindings menus.
-Requires [Bingus Shared Loader](https://github.com/CowboyBingus/BingusSharedLoader/releases/latest) v18 / API 1.
+Requires [Bingus Shared Loader](https://github.com/CowboyBingus/BingusSharedLoader/releases/latest) v18 or newer / API 1.
 
 - Grab the thumb and move vertically anywhere horizontally. The original grab point stays fixed.
 - Click the track to centre the thumb there, then keep holding to drag.
 - Both ends clamp cleanly. Release, focus loss and menu changes cancel ownership.
 - Ordinary clicks outside a supported scrollbar do not capture pixels, inject input or write diagnostic logs.
-- Unsupported, hidden or invalid menus are left alone. The old screenshot/wheel fallback is no longer used by the runtime.
+- Unsupported, hidden or invalid menus are left alone. The old screenshot/wheel fallback has been removed from the runtime; its pixel-detector helpers remain only for offline tests.
 
 ## Install
 
-Close the game, replace the previous standalone package with `Clickable-Scrollbars-v2.14.1.zip` in Arsenal or HD2MM, enable it with Bingus Shared Loader v18, then Purge / Deploy. With Arsenal's default priority, put the loader last. Use one mod manager and one copy of this addon.
+Close the game, replace the previous standalone package with `Clickable-Scrollbars-v2.15.zip` in Arsenal or HD2MM, enable it with Bingus Shared Loader v18 or newer, then Purge / Deploy. With Arsenal's default priority, put the loader last. Use one mod manager and one copy of this addon.
 
-Vanilla Plus Megapack v32 already contains the same addon code; use either the Megapack or this package, not both.
+Vanilla Plus Megapack also contains this addon; use either the Megapack or this package, not both.
 
 ## Settings
 
@@ -28,7 +28,7 @@ Optional file: `%LOCALAPPDATA%/ClickableScrollbars/ClickableScrollbars.ini`.
 | `native_verify_ms` | 200 | Delay before verifying native movement. |
 | `diagnostics` | 0 | Set to 1 to enable interaction traces and periodic log writes. |
 | `log_interval_ms` | 5000 | Minimum interval between diagnostic log writes. |
-| `error_limit` | 8 | Frame errors before the addon stops. |
+| `error_limit` | 8 | Frame errors in one burst that stop the addon; a burst ends after 3600 error-free frames (about a minute). |
 
 Legacy pixel-detector settings no longer affect runtime interaction. An old `native=0` override must be removed or changed to `native=1` to enable scrolling.
 
@@ -42,6 +42,10 @@ Run `python -B scripts/build.py` to build. See [build instructions](CONTRIBUTING
 
 AI-assisted development with GPT-6 Astra and Claude Opus 5.5. This is an unofficial mod.
 
-Release **v2.14.1** changes only the documentation; the addon is identical to v2.14, which supports Steam build 25480438. v2.13 fixed Display scrollbar drags activating options and tabs while left click is held.
+Release **v2.15** handles every game update, so drags stay smooth at high frame rates, and makes 1 Windows call on an idle frame; measured in live play it costs 0.005 ms per frame in missions and on the ship. v2.13 fixed Display scrollbar drags activating options and tabs while left click is held.
 
-Current version: **v2.14.1**, for game build **25480438**. See [changes](CHANGELOG.md) and [validation coverage](docs/MIGRATION_VALIDATION.md).
+Current version: **v2.15**, for game build **25480438**. See [changes](CHANGELOG.md) and [validation coverage](docs/MIGRATION_VALIDATION.md).
+
+## License
+
+Zero-Clause BSD (0BSD): use, copy, modify and distribute for any purpose, with no conditions. See `LICENSE`.

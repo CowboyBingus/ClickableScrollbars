@@ -1,3 +1,9 @@
-- Documentation-only release: the addon is identical to v2.14 (same packaged addon).
-- Rewrites the install notes packaged with the addon and the README status: one current status line instead of the compatibility-candidate notes left from the game-build update. Scrollbar dragging works in live play.
-- Lists one loader requirement, Bingus Shared Loader v18, and notes that Vanilla Plus Megapack v32 already contains the same addon.
+- Fixed: at high frame rates updates were skipped, so drags were less smooth and short clicks could be missed; every update is now handled.
+- Another mod that declares the same Windows functions first can no longer break the scrollbars.
+- Long grid drags no longer fill the FFI type table every mod shares.
+- An idle frame makes 1 Windows call instead of 5, and a held drag makes 9 memory reads instead of 25 without allocating.
+- The addon no longer keeps a 1-4 MB screen-capture bitmap for the whole session.
+- An error in an update below the addon now pauses it until updates run cleanly again, instead of stopping it.
+- A second copy of the addon now loads nothing.
+- Requires Bingus Shared Loader v18 or newer.
+- Measured in live play: 0.005 ms per frame in missions and on the ship (was 0.011).

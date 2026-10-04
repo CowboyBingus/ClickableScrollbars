@@ -1,16 +1,15 @@
-Clickable Scrollbars - v2.14.1
+Clickable Scrollbars - v2.15
 
 Mouse accessibility for Helldivers 2 menu scrollbars.
 
 Release for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed;
-scrollbar dragging works in live play. v2.14.1 changes only this documentation;
-the addon is identical to v2.14.
+scrollbar dragging works in live play.
 
 INSTALL
 1. Close Helldivers 2.
-2. Import Clickable-Scrollbars-v2.14.1.zip into Arsenal or HD2MM, replacing the
+2. Import Clickable-Scrollbars-v2.15.zip into Arsenal or HD2MM, replacing the
    previous standalone Clickable Scrollbars entry.
-3. Enable it together with Bingus Shared Loader v18.
+3. Enable it together with Bingus Shared Loader v18 or newer.
 4. With Arsenal's default priority, place the shared loader last, then
    Purge / Deploy. Use one manager; do not copy patch files into the game folder.
 5. If an old diagnostic INI contains native=0, remove that line or set native=1.
@@ -50,7 +49,7 @@ UNINSTALL
 Disable the mod, purge the deployment and redeploy the remaining mods. Restart
 the game to remove the addon from the running session.
 
-Requires Bingus Shared Loader v18 / API 1, installed separately:
+Requires Bingus Shared Loader v18 or newer / API 1, installed separately:
 https://github.com/CowboyBingus/BingusSharedLoader/releases/latest
 
 Developed with assistance from GPT-6 Astra and Claude Opus 5.5.

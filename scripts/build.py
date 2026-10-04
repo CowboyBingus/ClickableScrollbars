@@ -2,9 +2,11 @@
 
 The addon is a plaintext discovery entry: Bingus Shared Loader v15+ finds the
 `-- HD2-Addon:` declaration in the deployed archive and requires it at startup.
-The build validates the declaration, compiles the source with the same LuaJIT
-the other mods use, runs the Lua test suites, rebuilds the patch archive and
-re-reads it with the repository's patch inspector.
+scripts/entry.py assembles that entry from src/: every other source file as a
+function of its own, ahead of src/clickable_scrollbars.lua, which runs each once.
+The build validates the declaration, compiles the entry with the same LuaJIT the
+other mods use, runs the Lua test suites against it, rebuilds the patch archive
+and re-reads it with the repository's patch inspector.
 """
 import json
 import argparse
@@ -22,6 +24,7 @@ WORKSPACE = ROOT.parent if (ROOT.parent / 'scripts/archive.py').is_file() else R
 sys.path.insert(0, str(ROOT / 'scripts'))
 from archive import (ARCHIVE, EXE_SHA, GAME, GAME_DLL_SHA, LUA, make_archive,  # noqa: E402
                      resource_hash, sha)
+from entry import MAIN, entry_text, source_files  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location('clickable_package', ROOT / 'scripts/package.py')
 _package = importlib.util.module_from_spec(_spec)
@@ -29,12 +32,13 @@ _spec.loader.exec_module(_package)
 package_release = _package.package_release
 
 MODULE = 'mods/cowboybingus/clickable_scrollbars'
-REVISION = 'v2.14'
-VERSION = 'v2.14.1'  # package version; the module revision is unchanged
+REVISION = 'v2.15'
+VERSION = 'v2.15'
 # In-game confirmation applies only to these exact runtime bytes.
 VERIFIED_SOURCE_SHA256 = 'FEF9C8287C6E17DB5004EFCA4FA57372C3E663C4A622D3035895DD3D8E0268ED'
 DECLARATION = '-- HD2-Addon: ' + MODULE + '\n'
-SOURCE = ROOT / 'src/clickable_scrollbars.lua'
+# The entry the suites load and the archive ships, assembled from src/ by scripts/entry.py.
+ENTRY = ROOT / 'build/clickable_scrollbars.lua'
 INSPECTOR = Path(os.environ.get('HD2_PATCH_INSPECT', WORKSPACE / 'tools/bin/hd2-patch-inspect.exe'))
 
 # The addon stays a loader-delivered Lua resource. UI data writes and the
@@ -60,11 +64,8 @@ def lua(arguments):
 
 
 def read_source():
-    raw = SOURCE.read_bytes()
-    if raw.startswith(b'\xef\xbb\xbf') or b'\0' in raw:
-        raise ValueError('Source must be plain UTF-8 without a BOM or NUL bytes')
-    if b'\r' in raw:
-        raise ValueError('Source must use LF line endings')
+    """The assembled entry; entry_text refuses a source file with a BOM, NUL bytes or CR line endings."""
+    raw = entry_text(ROOT)
     text = raw.decode('utf-8')
     if not text.startswith(DECLARATION):
         raise ValueError('First line must be exactly: ' + DECLARATION.strip())
@@ -84,17 +85,21 @@ def main():
     build = ROOT / 'build'
     build.mkdir(parents=True, exist_ok=True)
     source = read_source()
+    ENTRY.write_bytes(source)
     tests = ''
-    for name in ('test_detector.lua', 'test_install.lua', 'test_native.lua', 'test_platform.lua',
-                 'test_performance.lua', 'test_profile.lua', 'test_ui_sim.lua', 'test_settings_input.lua'):
+    # Every suite takes the repository root and the entry.
+    for name in ('test_entry.lua', 'test_detector.lua', 'test_install.lua', 'test_native.lua',
+                 'test_platform.lua', 'test_ffi_names.lua', 'test_performance.lua', 'test_profile.lua',
+                 'test_ui_sim.lua', 'test_settings_input.lua', 'test_native_types.lua',
+                 'test_frame_budget.lua', 'test_current_ui.lua'):
         test_path = ROOT / 'tests' / name
-        arguments = [test_path, WORKSPACE, SOURCE]
+        arguments = [test_path, ROOT, ENTRY]
         if name == 'test_platform.lua' and options.skip_desktop_capture:
             arguments.append('--skip-capture')
         output, env = lua(arguments)
         tests += output
-    compile_check, env = lua(['-e', 'local f, e = loadfile([[' + str(SOURCE) + ']]); '
-                              'assert(f, e); print("source compiles")'])
+    compile_check, env = lua(['-e', 'local f, e = loadfile([[' + str(ENTRY) + ']]); '
+                              'assert(f, e); print("entry compiles")'])
     tests += compile_check
 
     resource = struct.pack('<II', len(source), 2) + source
@@ -130,7 +135,7 @@ def main():
         'description': 'Click a menu scrollbar track to move the thumb there, and drag the '
                        'thumb to scroll with the pointer. Armory and mission loadout lists use '
                        'their own native scroll models. Inactive menus perform no capture or injected input. Requires Bingus '
-                       'Shared Loader v18 / API 1.',
+                       'Shared Loader v18 or newer / API 1.',
         'requires': [{'name': 'Bingus Shared Loader', 'api': 1, 'revision': 'loader-v15'}],
         'mechanism': {
             'input': 'left-button press, cursor position',
@@ -163,9 +168,11 @@ def main():
         'desktop_capture_verified': not options.skip_desktop_capture,
         'offline_tests': tests.strip(),
         'source_sha256': {path.relative_to(WORKSPACE).as_posix(): sha(path.read_bytes())
-                          for path in [SOURCE, ROOT / 'scripts/build.py', ROOT / 'scripts/package.py',
+                          for path in [ROOT / MAIN, *source_files(ROOT), ROOT / 'scripts/entry.py',
+                                       ROOT / 'scripts/build.py', ROOT / 'scripts/package.py',
                                        ROOT / 'tests/test_detector.lua', ROOT / 'tests/test_install.lua']
                           if path.is_file()},
+        'entry_sha256': sha(source),
     }
     release = package_release(ROOT, build, report)
     tests += run([sys.executable, ROOT / 'tests/test_package.py', release])

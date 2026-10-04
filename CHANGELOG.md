@@ -1,3 +1,20 @@
+# v2.15
+
+- Every game update is handled: at high frame rates several updates shared one clock value and the addon skipped all but the first, so drags were less smooth and very short clicks could be missed.
+- Every Windows function is declared under a private name, so another mod that declared the same function first can no longer break the scrollbars or the memory reader (a third-party mod disabled v2.14 this way).
+- The game's scroll and input functions are cast once per session from named types. v2.14 made new FFI types on every native call and, after about two minutes of grid dragging, filled the type table every mod shares.
+- A frame with no press and no held scrollbar makes 1 Windows call instead of 5, and a press asks for the window focus once instead of twice.
+- A held Armory drag frame makes 9 memory reads instead of 25 and no longer allocates about 3.8 KB; the drag still cancels the moment the list changes.
+- Native scroll calls and writes, the foreground-window check and releasing a scrollbar no longer allocate memory.
+- The addon no longer keeps a screen device context and a 1-4 MB capture bitmap allocated for the whole session.
+- The unused input-synthesis function (SendInput) and the legacy pixel detector are no longer shipped; the detector stays in `src/detector.lua` for offline tests.
+- An error in an update below the addon now pauses it, dropping any held gesture, and it resumes after 60 clean frames instead of stopping.
+- The addon's own frame errors stop it only in a burst: 8 errors with fewer than 3600 error-free frames between them, instead of 8 over the whole session. The log is written once per burst and keeps the stop reason after shutdown.
+- A second copy of the addon now loads nothing and leaves the first copy's log alone.
+- The source is split into eight files under `src/`, and `scripts/entry.py` builds the one plaintext entry the loader runs; in every test suite its game calls, writes and logs match the single file's.
+- New tests cover clashing Windows prototypes, FFI type growth over 20,000 native calls, per-frame allocation, the frame budget and the built entry; the build now also runs the captured Armory replay `tests/test_current_ui.lua`.
+- Licensed under the Zero-Clause BSD license (0BSD).
+
 # v2.14.1
 
 - Documentation-only release: the addon is identical to v2.14 (same packaged addon).
