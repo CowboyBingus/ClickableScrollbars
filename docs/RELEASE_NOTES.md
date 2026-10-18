@@ -1,9 +1,1 @@
-- Fixed: at high frame rates updates were skipped, so drags were less smooth and short clicks could be missed; every update is now handled.
-- Another mod that declares the same Windows functions first can no longer break the scrollbars.
-- Long grid drags no longer fill the FFI type table every mod shares.
-- An idle frame makes 1 Windows call instead of 5, and a held drag makes 9 memory reads instead of 25 without allocating.
-- The addon no longer keeps a 1-4 MB screen-capture bitmap for the whole session.
-- An error in an update below the addon now pauses it until updates run cleanly again, instead of stopping it.
-- A second copy of the addon now loads nothing.
-- Requires Bingus Shared Loader v18 or newer.
-- Measured in live play: 0.005 ms per frame in missions and on the ship (was 0.011).
+- Does nothing on a game build it does not know: it now checks the game's files before anything else, like the other CowboyBingus mods. Its log then says why, for example `status=disabled: unsupported game build (needs Steam build 25480438)`.

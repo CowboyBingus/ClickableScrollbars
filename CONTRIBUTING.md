@@ -2,7 +2,7 @@
 
 Use Windows x64, Python 3.10+ and the LuaJIT commit pinned in `dependencies.json`. Build LuaJIT with `msvcbuild.bat nogc64` from an x64 Native Tools command prompt, then place the executable at `tools/src/LuaJIT/src/luajit.exe` or set `HD2_LUAJIT`.
 
-Run `python scripts/build.py`. The build assembles the addon's entry from `src/` with `scripts/entry.py`, checks its `-- HD2-Addon:` declaration, compiles it, runs every Lua suite in `tests/` against it plus the package check, rebuilds `build/9ba626afa44a3aa3.patch_0`, re-reads it with the patch inspector at `tools/bin/hd2-patch-inspect.exe` (or `HD2_PATCH_INSPECT`), and writes `releases/Clickable-Scrollbars-v2.15.zip`.
+Run `python scripts/build.py`. The build assembles the addon's entry from `src/` with `scripts/entry.py`, checks its `-- HD2-Addon:` declaration, compiles it, runs every Lua suite in `tests/` against it plus the package check, rebuilds `build/9ba626afa44a3aa3.patch_0`, re-reads it with the patch inspector at `tools/bin/hd2-patch-inspect.exe` (or `HD2_PATCH_INSPECT`), and writes `releases/Clickable-Scrollbars-v2.15.1.zip`.
 
 The source is split by concern. `src/clickable_scrollbars.lua` carries the loader's declaration and runs each other source file once, in this order: `native.lua` (the UI bridge, this game build's layout, the game's scroll and input routines and the native writes), `memory.lua` (memory views and the reader the addon ships with), `locate.lua` (which scrollbar is visible and who owns it), `model.lua` (the owner's scroll model), `detector.lua` (the legacy pixel detector, which only the offline tests use), `settings.lua` (the defaults, the optional ini and the display scale), `platform.lua` (the Windows functions) and `install.lua` (the runtime). At load the files share what they need through one table, `cs`. `scripts/entry.py` places each file ahead of the main file as a function of its own, so each has its own limit of 200 locals; the Vanilla Plus Megapack build uses the same script. Edit the files in `src/`, never the built entry. To run one suite by hand, write the entry with `python scripts/entry.py` and pass the repository root and the entry to the suite, for example `tools/src/LuaJIT/src/luajit.exe tests/test_install.lua . build/clickable_scrollbars.lua`.
 
@@ -12,7 +12,7 @@ The build refuses a source file that mentions hook, DLL-loading or cross-process
 
 # Publication
 
-Only `publication-files.json` entries are public. Run `python scripts/privacy_audit.py --zip releases/Clickable-Scrollbars-v2.15.zip --git` after staging a release to check the source inventory, archive metadata and Git history.
+Only `publication-files.json` entries are public. Run `python scripts/privacy_audit.py --zip releases/Clickable-Scrollbars-v2.15.1.zip --git` after staging a release to check the source inventory, archive metadata and Git history.
 
 Do not commit local paths, process captures, dumps, logs, extracted game resources, credentials or a personal Git identity. Commit as CowboyBingus with the GitHub noreply address, publish release assets only from the audited build, and never copy files into a game directory by hand.
 

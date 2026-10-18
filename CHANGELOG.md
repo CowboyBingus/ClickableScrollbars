@@ -1,3 +1,7 @@
+# v2.15.1
+
+- Does nothing on a game build it does not know: it now checks the game's files before anything else, like the other CowboyBingus mods. Its log then says why, for example `status=disabled: unsupported game build (needs Steam build 25480438)`.
+
 # v2.15
 
 - Every game update is handled: at high frame rates several updates shared one clock value and the addon skipped all but the first, so drags were less smooth and very short clicks could be missed.

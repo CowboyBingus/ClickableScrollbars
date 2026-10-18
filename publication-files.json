@@ -19,6 +19,7 @@
   "scripts/entry.py",
   "scripts/package.py",
   "scripts/privacy_audit.py",
+  "src/bingus_memory.lua",
   "src/bingus_runtime.lua",
   "src/clickable_scrollbars.lua",
   "src/detector.lua",

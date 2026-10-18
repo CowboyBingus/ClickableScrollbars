@@ -1,6 +1,6 @@
-> Release **v2.15** for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed; scrollbar dragging works in live play.
+> Release **v2.15.1** for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed; scrollbar dragging works in live play.
 
-# Clickable Scrollbars — v2.15
+# Clickable Scrollbars — v2.15.1
 
 Adds smooth click-and-drag scrolling to Helldivers 2 Armory equipment, mission loadout, Career, Display settings and Options bindings menus.
 Requires [Bingus Shared Loader](https://github.com/CowboyBingus/BingusSharedLoader/releases/latest) v18 or newer / API 1.
@@ -9,11 +9,12 @@ Requires [Bingus Shared Loader](https://github.com/CowboyBingus/BingusSharedLoad
 - Click the track to centre the thumb there, then keep holding to drag.
 - Both ends clamp cleanly. Release, focus loss and menu changes cancel ownership.
 - Ordinary clicks outside a supported scrollbar do not capture pixels, inject input or write diagnostic logs.
+- On a game build other than 25480438 the addon does nothing: it checks the SHA-256 of `helldivers2.exe` and `game.dll` before anything else and logs why it stopped.
 - Unsupported, hidden or invalid menus are left alone. The old screenshot/wheel fallback has been removed from the runtime; its pixel-detector helpers remain only for offline tests.
 
 ## Install
 
-Close the game, replace the previous standalone package with `Clickable-Scrollbars-v2.15.zip` in Arsenal or HD2MM, enable it with Bingus Shared Loader v18 or newer, then Purge / Deploy. With Arsenal's default priority, put the loader last. Use one mod manager and one copy of this addon.
+Close the game, replace the previous standalone package with `Clickable-Scrollbars-v2.15.1.zip` in Arsenal or HD2MM, enable it with Bingus Shared Loader v18 or newer, then Purge / Deploy. With Arsenal's default priority, put the loader last. Use one mod manager and one copy of this addon.
 
 Vanilla Plus Megapack also contains this addon; use either the Megapack or this package, not both.
 
@@ -44,7 +45,7 @@ AI-assisted development with GPT-6 Astra and Claude Opus 5.5. This is an unoffic
 
 Release **v2.15** handles every game update, so drags stay smooth at high frame rates, and makes 1 Windows call on an idle frame; measured in live play it costs 0.005 ms per frame in missions and on the ship. v2.13 fixed Display scrollbar drags activating options and tabs while left click is held.
 
-Current version: **v2.15**, for game build **25480438**. See [changes](CHANGELOG.md) and [validation coverage](docs/MIGRATION_VALIDATION.md).
+Current version: **v2.15.1**, for game build **25480438**. See [changes](CHANGELOG.md) and [validation coverage](docs/MIGRATION_VALIDATION.md).
 
 ## License
 
