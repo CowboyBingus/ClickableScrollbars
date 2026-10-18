@@ -1,1 +1,2 @@
 - Does nothing on a game build it does not know: it now checks the game's files before anything else, like the other CowboyBingus mods. Its log then says why, for example `status=disabled: unsupported game build (needs Steam build 25480438)`.
+- A frame with no new press now ends right after reading the mouse button, and the code that runs every frame stays in LuaJIT's interpreter, so it no longer makes the game's Lua compiler retry compiling it every frame.
