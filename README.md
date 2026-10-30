@@ -1,52 +1,9 @@
-> Release **v2.15.1** for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed; scrollbar dragging works in live play.
+# Clickable Scrollbars
 
-# Clickable Scrollbars — v2.15.1
+Clickable Scrollbars now ships inside the **[Vanilla Plus Megapack](https://github.com/CowboyBingus/VanillaPlusMegapack)**, the
+HellForge code mod that holds all twenty-five CowboyBingus Helldivers 2 mods in one download. Each mod is a component
+you switch on or off in the pack's settings. Clickable Scrollbars's C source is in
+[`src/components/clickable_scrollbars`](https://github.com/CowboyBingus/VanillaPlusMegapack/tree/main/src/components/clickable_scrollbars).
 
-Adds smooth click-and-drag scrolling to Helldivers 2 Armory equipment, mission loadout, Career, Display settings and Options bindings menus.
-Requires [Bingus Shared Loader](https://github.com/CowboyBingus/BingusSharedLoader/releases/latest) v18 or newer / API 1.
-
-- Grab the thumb and move vertically anywhere horizontally. The original grab point stays fixed.
-- Click the track to centre the thumb there, then keep holding to drag.
-- Both ends clamp cleanly. Release, focus loss and menu changes cancel ownership.
-- Ordinary clicks outside a supported scrollbar do not capture pixels, inject input or write diagnostic logs.
-- On a game build other than 25480438 the addon does nothing: it checks the SHA-256 of `helldivers2.exe` and `game.dll` before anything else and logs why it stopped.
-- Unsupported, hidden or invalid menus are left alone. The old screenshot/wheel fallback has been removed from the runtime; its pixel-detector helpers remain only for offline tests.
-
-## Install
-
-Close the game, replace the previous standalone package with `Clickable-Scrollbars-v2.15.1.zip` in Arsenal or HD2MM, enable it with Bingus Shared Loader v18 or newer, then Purge / Deploy. With Arsenal's default priority, put the loader last. Use one mod manager and one copy of this addon.
-
-Vanilla Plus Megapack also contains this addon; use either the Megapack or this package, not both.
-
-## Settings
-
-Optional file: `%LOCALAPPDATA%/ClickableScrollbars/ClickableScrollbars.ini`.
-
-| Key | Default | Meaning |
-| --- | ---: | --- |
-| `enabled` | 1 | Set to 0 to disable the addon. |
-| `native` | 1 | Set to 0 to disable native interaction; there is no wheel fallback. |
-| `native_verify_ms` | 200 | Delay before verifying native movement. |
-| `diagnostics` | 0 | Set to 1 to enable interaction traces and periodic log writes. |
-| `log_interval_ms` | 5000 | Minimum interval between diagnostic log writes. |
-| `error_limit` | 8 | Frame errors in one burst that stop the addon; a burst ends after 3600 error-free frames (about a minute). |
-
-Legacy pixel-detector settings no longer affect runtime interaction. An old `native=0` override must be removed or changed to `native=1` to enable scrolling.
-
-## Validation
-
-Supported game: Steam build 25480438 / EXE 1.8.46015.0. Offline checks cover the Armory, Career and Display settings scrollbars; scrollbar dragging works in live play. The mission loadout scrollbar and the Display settings fix have not been confirmed separately in game. Measured in recorded play the addon costs under 0.01 ms per frame. See [validation](docs/VALIDATION.md).
-
-Diagnostic output, when enabled, goes to `%LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs/ClickableScrollbars.log`. Startup, shutdown and actual errors can still write a log. Private logs and machine details are excluded from releases.
-
-Run `python -B scripts/build.py` to build. See [build instructions](CONTRIBUTING.md).
-
-AI-assisted development with GPT-6 Astra and Claude Opus 5.5. This is an unofficial mod.
-
-Release **v2.15** handles every game update, so drags stay smooth at high frame rates, and makes 1 Windows call on an idle frame; measured in live play it costs 0.005 ms per frame in missions and on the ship. v2.13 fixed Display scrollbar drags activating options and tabs while left click is held.
-
-Current version: **v2.15.1**, for game build **25480438**. See [changes](CHANGELOG.md) and [validation coverage](docs/MIGRATION_VALIDATION.md).
-
-## License
-
-Zero-Clause BSD (0BSD): use, copy, modify and distribute for any purpose, with no conditions. See `LICENSE`.
+The standalone Lua mod (v2.15.1 and earlier, for the Lua mod loaders) is on the
+[`legacy`](https://github.com/CowboyBingus/ClickableScrollbars/tree/legacy) branch. Its releases and tags are unchanged.
